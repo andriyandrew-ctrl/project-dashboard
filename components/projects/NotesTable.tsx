@@ -76,8 +76,8 @@ export function NotesTable({ notes, onAddNote, onEditNote, onDeleteNote, onNoteC
                 </Button>
             </div>
 
-            <div className="rounded-lg border border-border bg-card">
-                <Table>
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
+                <Table className="min-w-[800px]">
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-12">
@@ -89,10 +89,10 @@ export function NotesTable({ notes, onAddNote, onEditNote, onDeleteNote, onNoteC
                                     onCheckedChange={toggleSelectAll}
                                 />
                             </TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Added by</TableHead>
-                            <TableHead>Added date</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead className="min-w-[200px]">Name</TableHead>
+                            <TableHead className="min-w-[120px]">Added by</TableHead>
+                            <TableHead className="min-w-[120px]">Added date</TableHead>
+                            <TableHead className="min-w-[100px]">Status</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
                     </TableHeader>

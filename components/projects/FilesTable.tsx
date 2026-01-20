@@ -58,8 +58,8 @@ export function FilesTable({ files, onAddFile }: FilesTableProps) {
                 </Button>
             </div>
 
-            <div className="rounded-lg border border-border bg-card">
-                <Table>
+            <div className="rounded-lg border border-border bg-card overflow-x-auto">
+                <Table className="min-w-[700px]">
                     <TableHeader>
                         <TableRow>
                             <TableHead className="w-12">
@@ -72,9 +72,9 @@ export function FilesTable({ files, onAddFile }: FilesTableProps) {
                                     onCheckedChange={toggleSelectAll}
                                 />
                             </TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Added by</TableHead>
-                            <TableHead>Added date</TableHead>
+                            <TableHead className="min-w-[250px]">Name</TableHead>
+                            <TableHead className="min-w-[120px]">Added by</TableHead>
+                            <TableHead className="min-w-[120px]">Added date</TableHead>
                             <TableHead className="w-12" />
                         </TableRow>
                     </TableHeader>
