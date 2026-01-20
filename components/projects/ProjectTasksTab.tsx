@@ -51,9 +51,9 @@ export function ProjectTasksTab({ project }: ProjectTasksTabProps) {
       prev.map((task) =>
         task.id === taskId
           ? {
-              ...task,
-              status: task.status === "done" ? "todo" : "done",
-            }
+            ...task,
+            status: task.status === "done" ? "todo" : "done",
+          }
           : task,
       ),
     )
@@ -137,7 +137,7 @@ function TaskBadges({ workstreamName }: TaskBadgesProps) {
   if (!workstreamName) return null
 
   return (
-    <Badge variant="muted" className="whitespace-nowrap text-[11px]">
+    <Badge variant="muted" className="whitespace-nowrap text-[11px] hidden sm:inline">
       {workstreamName}
     </Badge>
   )
@@ -145,13 +145,14 @@ function TaskBadges({ workstreamName }: TaskBadgesProps) {
 
 type TaskStatusProps = {
   status: ProjectTask["status"]
+  className?: string
 }
 
-function TaskStatus({ status }: TaskStatusProps) {
+function TaskStatus({ status, className }: TaskStatusProps) {
   const label = getStatusLabel(status)
   const color = getStatusColor(status)
 
-  return <span className={cn("font-medium", color)}>{label}</span>
+  return <span className={cn("font-medium", color, className)}>{label}</span>
 }
 
 function getStatusLabel(status: ProjectTask["status"]): string {
@@ -250,7 +251,7 @@ function TaskRowDnD({ task, onToggle }: TaskRowDnDProps) {
         titleSuffix={<TaskBadges workstreamName={task.workstreamName} />}
         meta={
           <>
-            <TaskStatus status={task.status} />
+            <TaskStatus status={task.status} className="hidden sm:inline" />
             {task.dueLabel && (
               <span className="text-muted-foreground">{task.dueLabel}</span>
             )}
