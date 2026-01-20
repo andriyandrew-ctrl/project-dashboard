@@ -17,7 +17,7 @@ export function getFileIcon(type: QuickLink["type"]) {
     case "zip":
       return { src: "/zip.png", alt: "ZIP" }
     case "fig":
-      return { src: "/Figma.png", alt: "Figma" }
+      return { src: "/figma.png", alt: "Figma" }
     default:
       return { src: "/pdf.png", alt: "File" }
   }
