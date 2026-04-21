@@ -22,10 +22,7 @@ export type SidebarFooterItem = {
 }
 
 export const navItems: NavItem[] = [
-    { id: "inbox", label: "Inbox", badge: 24 },
-    { id: "my-tasks", label: "My task" },
     { id: "projects", label: "Projects", isActive: true },
-    { id: "clients", label: "Clients" },
     { id: "performance", label: "Performance" },
 ]
 
@@ -36,8 +33,4 @@ export const activeProjects: ActiveProjectSummary[] = [
     { id: "healthcare-app", name: "Healthcare Booking App", color: "var(--chart-2)", progress: 10 },
 ]
 
-export const footerItems: SidebarFooterItem[] = [
-    { id: "settings", label: "Settings" },
-    { id: "templates", label: "Templates" },
-    { id: "help", label: "Help" },
-]
+export const footerItems: SidebarFooterItem[] = []

@@ -1,50 +1,34 @@
 export type ProjectMode = 'quick' | 'guided';
-
 export type ProjectIntent = 'delivery' | 'experiment' | 'internal';
-
-export type SuccessType = 'deliverable' | 'metric' | 'undefined';
-
-export type DeadlineType = 'none' | 'target' | 'fixed';
-
-export type WorkStructure = 'linear' | 'milestones' | 'multistream';
-
-export interface ProjectDeliverable {
-  id: string;
-  title: string;
-  /** ISO date string, e.g. 2025-12-25 */
-  dueDate?: string;
-}
-
-export interface ProjectMetric {
-  id: string;
-  name: string;
-  target?: string;
-}
-
-export type OwnershipAccessLevel = 'full_access' | 'can_edit' | 'can_view';
-
-export interface OwnershipEntry {
-  accountId: string;
-  access: Exclude<OwnershipAccessLevel, 'full_access'>;
-}
+export type SuccessType = 'deliverable' | 'kpi' | 'undefined';
+export type StructureType = 'linear' | 'milestone' | 'multistream';
 
 export interface ProjectData {
   mode?: ProjectMode;
+  name?: string;
+  
+  // Data Baru
+  province?: string; // Menyimpan Provinsi
+  city?: string;     // Menyimpan Kota
+  inScope?: string;  // Tambahan untuk Scope of Work
+  outOfScope?: string; // Tambahan untuk Scope of Work
+
   intent?: ProjectIntent;
-  successType: SuccessType;
-  deliverables: ProjectDeliverable[];
-  metrics?: ProjectMetric[];
-  description?: string;
-  metricName?: string;
-  metricTarget?: string;
-  deadlineType: DeadlineType;
-  deadlineDate?: string; 
+  description?: string; 
+  successType?: SuccessType;
+  targetDeadline?: string;
+  targetProduksi?: string;
+  targetRevenue?: string;
+  pic?: string;
+  partner?: string;
+  client?: string;
+  structure?: StructureType;
+
+  deliverables?: any[];
+  metrics?: any[];
+  deadlineType?: string;
+  contributorIds?: string[];
+  stakeholderIds?: string[];
+  addStarterTasks?: boolean;
   ownerId?: string;
-  contributorIds: string[];
-  stakeholderIds: string[];
-  contributorOwnerships?: OwnershipEntry[];
-  stakeholderOwnerships?: OwnershipEntry[];
-  structure?: WorkStructure;
-  addStarterTasks: boolean;
-  clientId?: string;
 }

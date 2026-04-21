@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CaretDown, DotsSixVertical, Plus } from "@phosphor-icons/react/dist/ssr"
+// PERUBAHAN: Menambahkan import CaretUp
+import { CaretDown, CaretUp, DotsSixVertical, Plus, FolderSimple, CheckCircle, Clock, PlayCircle } from "@phosphor-icons/react/dist/ssr"
 import {
   DndContext,
   type DragEndEvent,
@@ -92,7 +93,6 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
   const handleDragOver = (event: DragOverEvent) => {
     const overId = event.over?.id
     if (typeof overId === "string" && !overId.startsWith("group:")) {
-      // only track task ids for per-row drop indicator
       setOverTaskId(overId)
     } else {
       setOverTaskId(null)
@@ -130,7 +130,6 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
         }
       })
 
-      // If we didn't land on a task but on a group container, allow dropping into empty lists
       if (targetGroupIndex === -1 && overId.startsWith("group:")) {
         const groupId = overId.slice("group:".length)
         targetGroupIndex = prev.findIndex((group) => group.id === groupId)
@@ -145,14 +144,12 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
       const sourceGroup = next[sourceGroupIndex]
       const targetGroup = next[targetGroupIndex]
 
-      // Reorder within the same workstream
       if (sourceGroupIndex === targetGroupIndex) {
         const reordered = arrayMove(sourceGroup.tasks, sourceTaskIndex, targetTaskIndex)
         next[sourceGroupIndex] = { ...sourceGroup, tasks: reordered }
         return next
       }
 
-      // Move across workstreams
       const sourceTasks = [...sourceGroup.tasks]
       const [moved] = sourceTasks.splice(sourceTaskIndex, 1)
       if (!moved) return prev
@@ -174,48 +171,62 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
 
   if (!state.length) {
     return (
-      <section>
-        <h2 className="text-sm font-semibold tracking-normal text-foreground uppercase">
-          WORKSTEAM BREAKDOWN
-        </h2>
-        <div className="mt-4 rounded-lg border border-dashed border-border/70 p-6 text-sm text-muted-foreground">
-          No workstreams defined yet.
+      <section className="py-12">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
+            <FolderSimple className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+            ALUR KERJA BELUM DITENTUKAN
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground max-w-[280px]">
+            Gunakan Project Wizard untuk merancang fase pekerjaan Anda.
+          </p>
         </div>
       </section>
     )
   }
 
   return (
-    <section className="rounded-2xl border border-border bg-muted shadow-[var(--shadow-workstream)] p-3 space-y-3">
-      <div className="flex items-center justify-between gap-3 px-2">
-        <h2 className="flex-1 min-w-0 truncate text-sm font-semibold tracking-normal text-foreground uppercase">
-          WORKSTEAM BREAKDOWN
-        </h2>
-        <div className="flex items-center gap-1 opacity-60 shrink-0">
+    // PERUBAHAN: Membungkus seluruh tab ke dalam kotak abu-abu (bg-muted/30)
+    <section className="rounded-2xl border border-border bg-muted/30 p-4 sm:p-5 shadow-sm">
+      
+      {/* HEADER TAB */}
+      <div className="flex items-center justify-between gap-3 mb-5 border-b border-border/50 pb-4">
+        <div className="flex items-center gap-2 text-primary">
+          <FolderSimple className="h-5 w-5" weight="fill" />
+          {/* PERUBAHAN: Font disamakan ukurannya dengan tab Overview */}
+          <h3 className="text-lg font-semibold text-foreground tracking-tight">
+            Workstream Breakdown
+          </h3>
+        </div>
+        
+        {/* PERUBAHAN: Logika dan Ikon Panah Diperbaiki */}
+        <div className="flex items-center gap-1 bg-background border border-border/50 p-1 rounded-lg shadow-sm">
           <Button
             variant="ghost"
             size="icon-sm"
-            className="rounded-lg hover:cursor-pointer"
-            aria-label="Collapse all"
-            onClick={() => setOpenValues([])}
+            className="h-7 w-7 rounded-md hover:bg-muted"
+            onClick={() => setOpenValues(allIds)}
             disabled={!allIds.length}
+            title="Buka Semua (Expand)"
           >
-            <CaretDown className="h-4 w-4" />
+            <CaretDown className="h-4 w-4" /> 
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
-            className="rounded-lg hover:cursor-pointer"
-            aria-label="Expand all"
-            onClick={() => setOpenValues(allIds)}
+            className="h-7 w-7 rounded-md hover:bg-muted"
+            onClick={() => setOpenValues([])}
             disabled={!allIds.length}
+            title="Tutup Semua (Collapse)"
           >
-            <CaretDown className="h-4 w-4 rotate-180" />
+            <CaretUp className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <div className="px-1">
+      <div className="px-0">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -230,35 +241,40 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
             onValueChange={(values) =>
               setOpenValues(Array.isArray(values) ? values : values ? [values] : [])
             }
+            className="space-y-4"
           >
             {state.map((group) => (
               <AccordionItem
                 key={group.id}
                 value={group.id}
-                className="mb-2 overflow-hidden rounded-xl border border-border bg-background last:mb-0"
+                // Kotak di dalam kotak utama
+                className="overflow-hidden rounded-xl border border-border bg-background shadow-sm transition-all hover:border-border/80"
               >
-                <AccordionTrigger className="bg-background">
+                <AccordionTrigger className="px-4 py-4 hover:bg-muted/40 [&[data-state=open]>div>div>svg.caret-icon]:rotate-0">
                   <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      <CaretDown className="h-4 w-4 text-muted-foreground hover:cursor-pointer" aria-hidden="true" />
-                      <span className="flex-1 truncate text-left text-sm font-medium text-foreground hover:cursor-pointer">
-                        {group.name}
-                      </span>
+                      <CaretDown className="caret-icon h-4 w-4 text-muted-foreground transition-transform duration-200 -rotate-90" aria-hidden="true" />
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="text-sm font-bold text-foreground truncate">
+                          {group.name}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <PhaseStatusBadge group={group} />
+                        </div>
+                      </div>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground shrink-0">
-                      <Button asChild size="icon-sm" variant="ghost" className="size-6 rounded-md">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
+                      <Button asChild size="icon-sm" variant="ghost" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
                         <span
                           role="button"
                           aria-label="Add task"
-                          onClick={(event) => {
-                            // Prevent toggling the accordion when clicking the add icon.
-                            event.stopPropagation()
-                          }}
+                          title="Tambah Tugas Baru"
+                          onClick={(event) => event.stopPropagation()}
                         >
-                          <Plus className="h-3.5 w-3.5" />
+                          <Plus className="h-4 w-4" weight="bold" />
                         </span>
                       </Button>
-                      <Separator orientation="vertical" className="h-4" />
+                      <Separator orientation="vertical" className="h-6" />
                       <GroupSummary group={group} />
                     </div>
                   </div>
@@ -276,14 +292,37 @@ export function WorkstreamTab({ workstreams }: WorkstreamTabProps) {
 
           <DragOverlay>
             {activeTask ? (
-              <div className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-background shadow-md">
-                <span className="flex-1 truncate text-left">{activeTask.name}</span>
+              <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm bg-background border border-primary/20 shadow-xl">
+                <DotsSixVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="flex-1 font-medium text-foreground">{activeTask.name}</span>
               </div>
             ) : null}
           </DragOverlay>
         </DndContext>
       </div>
     </section>
+  )
+}
+
+function PhaseStatusBadge({ group }: { group: WorkstreamGroup }) {
+  const total = group.tasks.length
+  const done = group.tasks.filter((t) => t.status === "done").length
+  
+  if (total === 0) return null
+  if (done === total) return (
+    <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold uppercase tracking-tight">
+      <CheckCircle className="h-3 w-3" weight="fill" /> Selesai
+    </div>
+  )
+  if (done > 0) return (
+    <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase tracking-tight">
+      <PlayCircle className="h-3 w-3" weight="fill" /> Berjalan
+    </div>
+  )
+  return (
+    <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
+      <Clock className="h-3 w-3" weight="bold" /> Terencana
+    </div>
   )
 }
 
@@ -298,20 +337,25 @@ function GroupSummary({ group }: GroupSummaryProps) {
   const color = getWorkstreamProgressColor(percent)
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">
-        {done}/{total}
-      </span>
-      <ProgressCircle progress={percent} color={color} size={18} />
+    <div className="flex items-center gap-3">
+      <div className="flex flex-col items-end">
+        <span className="text-[11px] font-bold text-foreground leading-none">
+          {percent}%
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          {done}/{total} Item
+        </span>
+      </div>
+      <ProgressCircle progress={percent} color={color} size={24} />
     </div>
   )
 }
 
 function getWorkstreamProgressColor(percent: number): string {
-  if (percent >= 80) return "var(--chart-3)"
-  if (percent >= 50) return "var(--chart-4)"
-  if (percent > 0) return "var(--chart-5)"
-  return "var(--chart-2)"
+  if (percent >= 100) return "rgb(16, 185, 129)" // Emerald
+  if (percent >= 50) return "rgb(59, 130, 246)" // Blue
+  if (percent > 0) return "rgb(245, 158, 11)"  // Amber
+  return "rgba(0,0,0,0.1)"
 }
 
 type WorkstreamTasksProps = {
@@ -325,9 +369,9 @@ function WorkstreamTasks({ group, activeTaskId, overTaskId, onToggleTask }: Work
   const { setNodeRef } = useDroppable({ id: `group:${group.id}` })
 
   return (
-    <AccordionContent className="border-t border-border bg-background/60 px-1.5">
+    <AccordionContent className="border-t border-border/50 bg-muted/10 p-2 sm:p-3">
       <SortableContext items={group.tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
-        <div ref={setNodeRef} className="space-y-1 py-2">
+        <div ref={setNodeRef} className="space-y-2 py-1">
           {group.tasks.map((task) => (
             <TaskRow
               key={task.id}
@@ -366,48 +410,59 @@ function TaskRow({ task, onToggle, activeTaskId, overTaskId }: TaskRowProps) {
 
   return (
     <div ref={setNodeRef} style={style} className="space-y-1">
-      {showDropLine && <div className="h-px w-full rounded-full bg-primary" />}
-      <TaskRowBase
-        checked={isDone}
-        title={task.name}
-        onCheckedChange={onToggle}
-        titleAriaLabel={task.name}
-        meta={
-          <>
-            {task.dueLabel && (
-              <span
-                className={cn(
-                  "text-muted-foreground",
-                  task.dueTone === "danger" && "text-red-500",
-                  task.dueTone === "warning" && "text-amber-500",
-                )}
+      {showDropLine && <div className="h-0.5 w-full rounded-full bg-primary" />}
+      <div className={cn(
+        "rounded-xl border border-border/50 bg-background transition-shadow",
+        isDragging ? "shadow-lg opacity-60" : "hover:shadow-sm"
+      )}>
+        <TaskRowBase
+          checked={isDone}
+          title={task.name}
+          onCheckedChange={onToggle}
+          titleAriaLabel={task.name}
+          meta={
+            <div className="flex items-center gap-3">
+              {task.dueLabel && (
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/50 text-[11px] font-medium">
+                  <Clock className={cn(
+                    "h-3 w-3",
+                    task.dueTone === "danger" ? "text-red-500" : "text-muted-foreground"
+                  )} />
+                  <span className={cn(
+                    task.dueTone === "danger" ? "text-red-600" : "text-muted-foreground"
+                  )}>
+                    {task.dueLabel}
+                  </span>
+                </div>
+              )}
+              {task.assignee && (
+                <div className="flex items-center gap-2 pr-1" title={task.assignee.name}>
+                   <Avatar className="h-6 w-6 border border-background">
+                    {task.assignee.avatarUrl && (
+                      <AvatarImage src={task.assignee.avatarUrl} alt={task.assignee.name} />
+                    )}
+                    <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
+                      {task.assignee.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              )}
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="h-8 w-8 rounded-lg text-muted-foreground cursor-grab active:cursor-grabbing hover:bg-muted"
+                aria-label="Reorder task"
+                {...attributes}
+                {...listeners}
               >
-                {task.dueLabel}
-              </span>
-            )}
-            {task.assignee && (
-              <Avatar className="size-6">
-                {task.assignee.avatarUrl && (
-                  <AvatarImage src={task.assignee.avatarUrl} alt={task.assignee.name} />
-                )}
-                <AvatarFallback>{task.assignee.name.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-            )}
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              className="size-7 rounded-md text-muted-foreground cursor-grab active:cursor-grabbing"
-              aria-label="Reorder task"
-              {...attributes}
-              {...listeners}
-            >
-              <DotsSixVertical className="h-4 w-4" weight="regular" />
-            </Button>
-          </>
-        }
-        className={cn(isDragging && "opacity-60")}
-      />
+                <DotsSixVertical className="h-4 w-4" weight="bold" />
+              </Button>
+            </div>
+          }
+          className="p-3"
+        />
+      </div>
     </div>
   )
 }

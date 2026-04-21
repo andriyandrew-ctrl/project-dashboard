@@ -1,0 +1,121 @@
+// Ini adalah file konfigurasi Prisma Anda
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+ }
+
+// 👤 Tabel User (Untuk Login & Role)
+model User {
+  id            String      @id @default(cuid())
+  name          String
+  email         String      @unique
+  password      String      // Password yang sudah di-hash
+  image         String?     // Foto profil
+  role          Role        @default(STAFF)
+  
+  // Relasi
+  projects      Project[]   @relation("ProjectLead")
+  tasks         Task[]
+  uploadedFiles FileAsset[]
+  logs          AuditLog[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum Role {
+  MANAGER
+  SR_SPECIALIST
+  SR_ENGINEER
+  SPECIALIST
+  ENGINEER
+  FOREMAN
+  TECHNICIAN
+  OFFICER
+  STAFF
+}
+
+// 📁 Tabel Project
+model Project {
+  id             String      @id @default(cuid())
+  name           String
+  description    String?
+  status         Status      @default(NOT_STARTED)
+  progress       Float       @default(0)
+  startDate      DateTime
+  endDate        DateTime
+  targetOutput   String?     // Contoh: "5 Unit Kapal"
+  
+  // Relasi
+  leadId         String
+  lead           User        @relation("ProjectLead", fields: [leadId], references: [id])
+  tasks          Task[]
+  files          FileAsset[]
+  logs           AuditLog[]
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+enum Status {
+  NOT_STARTED
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// 📝 Tabel Task (Pekerjaan di dalam Proyek)
+model Task {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("todo") // "todo" | "done"
+  phase     String   // "Engineering" | "Procurement" | "Fabrikasi"
+  
+  // Relasi
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId String?
+  assignee   User?    @relation(fields: [assigneeId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 📎 Tabel FileAsset (Repository Dokumen)
+model FileAsset {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // PDF, DWG, JPG, dll
+  sizeMB      Float
+  url         String   // Alamat file di storage (S3/Supabase Storage)
+  description String?
+
+  // Relasi
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploaderId  String
+  uploader    User     @relation(fields: [uploaderId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+// 🔍 Tabel AuditLog (Jejak Rekam / History)
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String   // "CREATE", "UPDATE", "DELETE", "DOWNLOAD"
+  entity    String   // "PROJECT", "TASK", "FILE"
+  details   String   // Deskripsi perubahan
+  
+  // Relasi
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+
+  createdAt DateTime @default(now())
+}

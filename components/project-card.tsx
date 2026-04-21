@@ -18,18 +18,19 @@ type ProjectCardProps = {
   variant?: "list" | "board"
 }
 
+// 1. MEMPERBAIKI TRANSLASI STATUS & WARNA
 function statusConfig(status: Project["status"]) {
   switch (status) {
-    case "active":
+    case "in-progress": // Jika di database "in-progress"
       return {
-        label: "Active",
-        dot: "bg-teal-600 dark:bg-teal-400",
+        label: "Active", // Maka di layar tulisannya "Active"
+        dot: "bg-teal-600 dark:bg-teal-400", // Warna titik hijau tosca
         pill: "text-teal-700 border-teal-200 bg-teal-50 dark:text-teal-100 dark:border-teal-500/40 dark:bg-teal-500/10",
       }
-    case "planned":
+    case "todo": 
       return {
-        label: "Planned",
-        dot: "bg-zinc-900 dark:bg-zinc-200",
+        label: "To Do", 
+        dot: "bg-zinc-900 dark:bg-zinc-200", // Warna titik abu gelap
         pill: "text-zinc-900 border-zinc-200 bg-zinc-50 dark:text-zinc-50 dark:border-zinc-600/60 dark:bg-zinc-600/20",
       }
     case "backlog":
@@ -38,13 +39,13 @@ function statusConfig(status: Project["status"]) {
         dot: "bg-orange-600 dark:bg-orange-400",
         pill: "text-orange-700 border-orange-200 bg-orange-50 dark:text-orange-100 dark:border-orange-500/40 dark:bg-orange-500/10",
       }
-    case "completed":
+    case "done":
       return {
         label: "Completed",
         dot: "bg-blue-600 dark:bg-blue-400",
         pill: "text-blue-700 border-blue-200 bg-blue-50 dark:text-blue-100 dark:border-blue-500/40 dark:bg-blue-500/10",
       }
-    case "cancelled":
+    case "canceled":
       return {
         label: "Cancelled",
         dot: "bg-rose-600 dark:bg-rose-400",
@@ -61,8 +62,10 @@ function statusConfig(status: Project["status"]) {
 
 export function ProjectCard({ project, actions, variant = "list" }: ProjectCardProps) {
   const s = statusConfig(project.status)
-  const assignee = project.members?.[0]
-  const dueDate = project.endDate
+  
+  // 2. MEMPERBAIKI CARA BACA NAMA PIC UNTUK AVATAR DI POJOK BAWAH
+  const assignee = project.assignees?.[0]?.name 
+  const dueDate = project.targetDate 
   const avatarUrl = getAvatarUrl(assignee)
   const isBoard = variant === "board"
   const router = useRouter()
@@ -71,12 +74,13 @@ export function ProjectCard({ project, actions, variant = "list" }: ProjectCardP
 
   const initials = assignee ? assignee.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase() : null
 
+  // 3. MENAMBAHKAN TEKS "Partner: " DI BAWAH JUDUL
   const secondaryLine = (() => {
-    const a = project.client
-    const b = project.typeLabel
-    const c = project.durationLabel
-    if (a || b || c) {
-      return [a, b, c].filter(Boolean).join(" • ")
+    const a = project.client ? `Partner: ${project.client}` : null
+    
+    // Tampilkan Partner, atau jika tidak ada partner, tampilkan Tags
+    if (a) {
+      return a
     }
     if (project.tags && project.tags.length > 0) {
       return project.tags.join(" • ")
@@ -85,9 +89,12 @@ export function ProjectCard({ project, actions, variant = "list" }: ProjectCardP
   })()
 
   const dueLabel = (() => {
-    if (!dueDate) return "No due date"
-    // Board view: dùng format ngắn gọn cho header
-    return format(dueDate, "MMM d")
+    if (!dueDate) return "No target"
+    try {
+      return format(new Date(dueDate), "MMM d")
+    } catch {
+      return dueDate
+    }
   })()
 
   const goToDetails = () => router.push(`/projects/${project.id}`)
@@ -175,19 +182,18 @@ export function ProjectCard({ project, actions, variant = "list" }: ProjectCardP
           </p>
           {isBoard
             ? secondaryLine && (
-              <div className="mt-1 text-sm text-muted-foreground truncate">{secondaryLine}</div>
+              <div className="mt-1 text-sm font-medium text-muted-foreground truncate">{secondaryLine}</div>
             )
             : secondaryLine && (
-              <p className="mt-1 text-sm text-muted-foreground truncate">{secondaryLine}</p>
+              <p className="mt-1 text-sm font-medium text-muted-foreground truncate">{secondaryLine}</p>
             )}
         </div>
-
 
         {!isBoard && (
           <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <CalendarBlank className="h-4 w-4" />
-              <span>{dueDate ? format(dueDate, "MMM d, yyyy") : "—"}</span>
+              <span>{dueLabel}</span>
             </div>
             <PriorityBadge level={project.priority} appearance="inline" />
           </div>
@@ -197,6 +203,8 @@ export function ProjectCard({ project, actions, variant = "list" }: ProjectCardP
 
         <div className="mt-3 flex items-center justify-between">
           <ProjectProgress project={project} size={isBoard ? 20 : 18} />
+          
+          {/* FOTO AVATAR PIC TETAP DI SINI */}
           <Avatar className="size-6 border border-border">
             <AvatarImage alt={assignee ?? ""} src={avatarUrl} />
             <AvatarFallback className="text-xs">

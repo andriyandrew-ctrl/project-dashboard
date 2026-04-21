@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import {
   Funnel,
@@ -41,9 +40,7 @@ interface FilterPopoverProps {
 export function FilterPopover({ initialChips, onApply, onClear, counts }: FilterPopoverProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
-  const [active, setActive] = useState<
-    "status" | "priority" | "tags" | "members"
-  >("status")
+  const [active, setActive] = useState<"status" | "priority" | "tags" | "members">("status")
 
   const [temp, setTemp] = useState<FilterTemp>(() => ({
     status: new Set<string>(),
@@ -54,7 +51,6 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
 
   const [tagSearch, setTagSearch] = useState("")
 
-  // Preselect from chips when opening
   useEffect(() => {
     if (!open) return
     const next: FilterTemp = {
@@ -74,18 +70,18 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
   }, [open, initialChips])
 
   const categories = [
-    { id: "status", label: "Status", icon: Spinner },
+    { id: "status", label: "Project Status", icon: Spinner },
     { id: "priority", label: "Priority", icon: ChartBar },
-    { id: "tags", label: "Tags", icon: Tag },
-    { id: "members", label: "Members", icon: User },
+    { id: "tags", label: "Tags / Labels", icon: Tag },
+    { id: "members", label: "Assignee / PIC", icon: User },
   ] as const
 
   const statusOptions = [
-    { id: "backlog", label: "Backlog", color: "var(--chart-2)" },
-    { id: "planned", label: "Planned", color: "var(--chart-2)" },
-    { id: "active", label: "Active", color: "var(--chart-3)" },
-    { id: "cancelled", label: "Cancelled", color: "var(--chart-5)" },
-    { id: "completed", label: "Completed", color: "var(--chart-3)" },
+    { id: "backlog", label: "Not Started", color: "var(--slate-400)", hex: "#94a3b8" },
+    { id: "planned", label: "Planned (Engineering)", color: "var(--blue-500)", hex: "#3b82f6" },
+    { id: "active", label: "In Progress (Fabrikasi)", color: "var(--amber-500)", hex: "#f59e0b" },
+    { id: "completed", label: "Completed", color: "var(--emerald-500)", hex: "#10b981" },
+    { id: "cancelled", label: "Cancelled", color: "var(--red-500)", hex: "#ef4444" },
   ]
 
   const priorityOptions = [
@@ -96,17 +92,18 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
   ]
 
   const memberOptions = [
-    { id: "no-member", label: "No member", avatar: undefined },
-    { id: "current", label: "Current member", avatar: undefined, hint: "1 projects" },
-    { id: "jason", label: "jason duong", avatar: "/placeholder-user.jpg", hint: "3 projects" },
+    { id: "no-member", label: "Unassigned", hint: "0 projects" },
+    { id: "andri", label: "Andri Setyawan", hint: "Lead" },
+    { id: "ivan", label: "Ivan Engineer", hint: "Staff" },
+    { id: "shafa", label: "Shafa QA", hint: "Staff" },
   ]
 
   const tagOptions = [
-    { id: "frontend", label: "frontend" },
-    { id: "backend", label: "backend" },
-    { id: "bug", label: "bug" },
-    { id: "feature", label: "feature" },
-    { id: "urgent", label: "urgent" },
+    { id: "engineering", label: "Engineering" },
+    { id: "procurement", label: "Procurement" },
+    { id: "construction", label: "Construction" },
+    { id: "research", label: "Research" },
+    { id: "maintenance", label: "Maintenance" },
   ]
 
   const filteredCategories = useMemo(() => {
@@ -150,30 +147,28 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
           Filter
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[720px] p-0 rounded-xl">
-        <div className="grid grid-cols-[260px_minmax(0,1fr)]">
-          <div className="p-3 border-r border-border/40">
+      <PopoverContent align="start" className="w-[600px] p-0 rounded-xl shadow-lg border-border">
+        <div className="grid grid-cols-[220px_minmax(0,1fr)] min-h-[300px]">
+          <div className="p-3 border-r border-border/40 bg-muted/10">
             <div className="px-1 pb-2">
-              <Input placeholder="Search..." value={query} onChange={(e) => setQuery(e.target.value)} className="h-8" />
+              <Input placeholder="Search filters..." value={query} onChange={(e) => setQuery(e.target.value)} className="h-8 bg-background" />
             </div>
             <div className="space-y-1">
               {filteredCategories.map((cat) => (
                 <button
                   key={cat.id}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-accent",
-                    active === cat.id && "bg-accent"
+                    "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+                    active === cat.id ? "bg-accent font-medium text-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                   )}
                   onClick={() => setActive(cat.id)}
                 >
-                  <cat.icon className="h-4 w-4" />
+                  <cat.icon className={cn("h-4 w-4", active === cat.id ? "text-primary" : "text-muted-foreground")} />
                   <span className="flex-1 text-left">{cat.label}</span>
                   {counts && counts[cat.id as keyof FilterCounts] && (
-                    <span className="text-xs text-muted-foreground">
-                      {/* Sum of counts for that category if provided */}
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-background border border-border/50 text-muted-foreground">
                       {Object.values(counts[cat.id as keyof FilterCounts] as Record<string, number>).reduce(
-                        (a, b) => a + (typeof b === "number" ? b : 0),
-                        0,
+                        (a, b) => a + (typeof b === "number" ? b : 0), 0
                       )}
                     </span>
                   )}
@@ -182,37 +177,33 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
             </div>
           </div>
 
-          <div className="p-3">
+          <div className="p-4 bg-background">
             {active === "priority" && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Select Priority</span>
                 {priorityOptions.map((opt) => (
-                  <label key={opt.id} className="flex items-center gap-2 rounded-lg border p-2 hover:bg-accent cursor-pointer">
+                  <label key={opt.id} className="flex items-center gap-3 rounded-lg border border-border/50 p-2.5 hover:bg-muted/50 cursor-pointer transition-colors">
                     <Checkbox
                       checked={temp.priority.has(opt.id)}
                       onCheckedChange={() => setTemp((t) => ({ ...t, priority: toggleSet(t.priority, opt.id) }))}
                     />
-                    <span className="text-sm flex-1">{opt.label}</span>
-                    {counts?.priority?.[opt.id] != null && (
-                      <span className="text-xs text-muted-foreground">{counts.priority[opt.id]}</span>
-                    )}
+                    <span className="text-sm flex-1 font-medium">{opt.label}</span>
                   </label>
                 ))}
               </div>
             )}
 
             {active === "status" && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Select Status</span>
                 {statusOptions.map((opt) => (
-                  <label key={opt.id} className="flex items-center gap-2 rounded-lg border p-2 hover:bg-accent cursor-pointer">
-                    <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: opt.color }} />
+                  <label key={opt.id} className="flex items-center gap-3 rounded-lg border border-border/50 p-2.5 hover:bg-muted/50 cursor-pointer transition-colors">
+                    <div className="h-3 w-3 rounded-sm shadow-sm" style={{ backgroundColor: opt.hex }} />
                     <Checkbox
                       checked={temp.status.has(opt.id)}
                       onCheckedChange={() => setTemp((t) => ({ ...t, status: toggleSet(t.status, opt.id) }))}
                     />
-                    <span className="text-sm flex-1">{opt.label}</span>
-                    {counts?.status?.[opt.id] != null && (
-                      <span className="text-xs text-muted-foreground">{counts.status[opt.id]}</span>
-                    )}
+                    <span className="text-sm flex-1 font-medium">{opt.label}</span>
                   </label>
                 ))}
               </div>
@@ -220,18 +211,14 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
 
             {active === "members" && (
               <div className="space-y-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Select Assignee</span>
                 {memberOptions.map((m) => (
-                  <label key={m.id} className="flex items-center gap-2 rounded-lg border p-2 hover:bg-accent cursor-pointer">
+                  <label key={m.id} className="flex items-center gap-3 rounded-lg border border-border/50 p-2.5 hover:bg-muted/50 cursor-pointer transition-colors">
                     <Checkbox
                       checked={temp.members.has(m.label)}
                       onCheckedChange={() => setTemp((t) => ({ ...t, members: toggleSet(t.members, m.label) }))}
                     />
-                    <span className="text-sm flex-1">{m.label}</span>
-                    {counts?.members?.[m.id] != null ? (
-                      <span className="text-xs text-muted-foreground">{counts.members[m.id]}</span>
-                    ) : (
-                      m.hint && <span className="text-xs text-muted-foreground">{m.hint}</span>
-                    )}
+                    <span className="text-sm flex-1 font-medium">{m.label}</span>
                   </label>
                 ))}
               </div>
@@ -239,42 +226,34 @@ export function FilterPopover({ initialChips, onApply, onClear, counts }: Filter
 
             {active === "tags" && (
               <div>
-                <div className="pb-2">
-                  <Input
-                    placeholder="Search tags..."
-                    value={tagSearch}
-                    onChange={(e) => setTagSearch(e.target.value)}
-                    className="h-8"
-                  />
+                <div className="pb-3">
+                  <Input placeholder="Search tags..." value={tagSearch} onChange={(e) => setTagSearch(e.target.value)} className="h-8" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {tagOptions
                     .filter((t) => t.label.toLowerCase().includes(tagSearch.toLowerCase()))
                     .map((t) => (
-                      <label key={t.id} className="flex items-center gap-2 rounded-lg border p-2 hover:bg-accent cursor-pointer">
+                      <label key={t.id} className="flex items-center gap-2 rounded-lg border border-border/50 p-2 hover:bg-muted/50 cursor-pointer transition-colors">
                         <Checkbox
                           checked={temp.tags.has(t.id)}
                           onCheckedChange={() => setTemp((s) => ({ ...s, tags: toggleSet(s.tags, t.id) }))}
                         />
-                        <span className="text-sm flex-1">{t.label}</span>
-                        {counts?.tags?.[t.id] != null && (
-                          <span className="text-xs text-muted-foreground">{counts.tags[t.id]}</span>
-                        )}
+                        <span className="text-xs font-medium flex-1">{t.label}</span>
                       </label>
                     ))}
                 </div>
               </div>
             )}
-
-            <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3">
-              <button onClick={handleClear} className="text-sm text-primary hover:underline">
-                Clear
-              </button>
-              <Button size="sm" className="h-8 rounded-lg" onClick={handleApply}>
-                Apply
-              </Button>
-            </div>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border/40 p-3 bg-muted/10">
+          <Button variant="ghost" size="sm" onClick={handleClear} className="text-muted-foreground hover:text-foreground">
+            Clear
+          </Button>
+          <Button size="sm" className="h-8 rounded-lg px-4" onClick={handleApply}>
+            Apply Filters
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

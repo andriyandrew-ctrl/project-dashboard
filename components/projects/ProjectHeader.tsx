@@ -22,6 +22,9 @@ export function ProjectHeader({ project, onEditProject }: ProjectHeaderProps) {
     { label: "Last sync", value: project.meta.lastSyncLabel, icon: <ArrowsClockwise className="h-4 w-4" /> },
   ]
 
+  // MENGAMBIL HANYA 1 NAMA PIC SAJA
+  const firstPic = project.backlog.picUsers?.[0]?.name;
+
   return (
     <section className="mt-4 space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -35,12 +38,14 @@ export function ProjectHeader({ project, onEditProject }: ProjectHeaderProps) {
               <Star className="h-3 w-3" />
               Active
             </Badge>
+            
             <Badge
               variant="outline"
               className="flex items-center gap-1 text-orange-800 bg-orange-100 border-none dark:text-orange-100 dark:bg-orange-500/15"
             >
               <User className="h-3 w-3" />
-              Assigned to me
+              {/* JIKA KOSONG, MUNCUL NOT ASSIGNED */}
+              {firstPic ? `Assigned to ${firstPic}` : "Not assigned"}
             </Badge>
           </div>
         </div>

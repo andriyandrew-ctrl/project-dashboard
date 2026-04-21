@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { DotsThree, MagnifyingGlass, Plus } from "@phosphor-icons/react/dist/ssr"
+import { DotsThree, MagnifyingGlass, Funnel, Export } from "@phosphor-icons/react/dist/ssr"
 import { format } from "date-fns"
 
 import type { ProjectNote, NoteStatus } from "@/lib/data/project-details"
@@ -58,29 +58,35 @@ export function NotesTable({ notes, onAddNote, onEditNote, onDeleteNote, onNoteC
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <div className="relative flex-1 max-w-sm">
+        <div className="space-y-4 p-3 bg-muted/10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="relative flex-1 max-w-md">
                     <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Search"
+                        placeholder="Cari nomor dokumen atau judul..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9"
+                        className="pl-9 bg-background border-border/60"
                     />
                 </div>
-                <Button variant="ghost" size="sm" onClick={onAddNote}>
-                    <Plus className="h-4 w-4" />
-                    Add notes
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="bg-background shadow-sm">
+                        <Funnel className="mr-1.5 h-4 w-4" />
+                        Filter
+                    </Button>
+                    <Button variant="outline" size="sm" className="bg-background shadow-sm">
+                        <Export className="mr-1.5 h-4 w-4" />
+                        Export Log
+                    </Button>
+                </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card">
+            <div className="rounded-lg border border-border bg-background shadow-sm overflow-hidden">
                 <Table>
-                    <TableHeader>
+                    <TableHeader className="bg-muted/30">
                         <TableRow>
-                            <TableHead className="w-12">
+                            <TableHead className="w-12 text-center">
                                 <Checkbox
                                     checked={
                                         filteredNotes.length > 0 &&
@@ -89,55 +95,63 @@ export function NotesTable({ notes, onAddNote, onEditNote, onDeleteNote, onNoteC
                                     onCheckedChange={toggleSelectAll}
                                 />
                             </TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Added by</TableHead>
-                            <TableHead>Added date</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead className="font-semibold text-foreground">Document Title</TableHead>
+                            <TableHead className="font-semibold text-foreground">Author / PIC</TableHead>
+                            <TableHead className="font-semibold text-foreground">Date Logged</TableHead>
+                            <TableHead className="font-semibold text-foreground">Status</TableHead>
                             <TableHead className="w-12"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {filteredNotes.map((note) => (
-                            <TableRow key={note.id} className="cursor-pointer" onClick={() => onNoteClick?.(note)}>
-                                <TableCell onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                    <Checkbox
-                                        checked={selectedNotes.includes(note.id)}
-                                        onCheckedChange={() => toggleSelectNote(note.id)}
-                                    />
-                                </TableCell>
-                                <TableCell className="font-medium">{note.title}</TableCell>
-                                <TableCell className="text-muted-foreground">
-                                    {note.addedBy.name}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">
-                                    {format(note.addedDate, "d MMM")}
-                                </TableCell>
-                                <TableCell>
-                                    <StatusBadge status={note.status} />
-                                </TableCell>
-                                <TableCell onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon-sm"
-                                                className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                                            >
-                                                <DotsThree className="h-4 w-4" weight="bold" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => onEditNote?.(note.id)}>
-                                                Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => onDeleteNote?.(note.id)}>
-                                                Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                        {filteredNotes.length > 0 ? (
+                            filteredNotes.map((note) => (
+                                <TableRow key={note.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => onNoteClick?.(note)}>
+                                    <TableCell className="text-center" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                        <Checkbox
+                                            checked={selectedNotes.includes(note.id)}
+                                            onCheckedChange={() => toggleSelectNote(note.id)}
+                                        />
+                                    </TableCell>
+                                    <TableCell className="font-medium text-foreground">{note.title}</TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {note.addedBy.name}
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">
+                                        {format(note.addedDate, "dd MMM yyyy")}
+                                    </TableCell>
+                                    <TableCell>
+                                        <StatusBadge status={note.status} />
+                                    </TableCell>
+                                    <TableCell onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon-sm"
+                                                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                                                >
+                                                    <DotsThree className="h-5 w-5" weight="bold" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-40">
+                                                <DropdownMenuItem onClick={() => onEditNote?.(note.id)}>
+                                                    Edit Document
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-red-600" onClick={() => onDeleteNote?.(note.id)}>
+                                                    Delete Log
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                    Tidak ada dokumen yang ditemukan.
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </div>
@@ -150,10 +164,10 @@ function StatusBadge({ status }: { status: NoteStatus }) {
         <Badge
             variant="outline"
             className={cn(
-                "text-xs font-normal capitalize",
+                "text-[11px] font-bold uppercase tracking-wider px-2 py-0.5",
                 status === "completed"
-                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-100"
-                    : "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-50"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-400"
+                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-400"
             )}
         >
             {status}

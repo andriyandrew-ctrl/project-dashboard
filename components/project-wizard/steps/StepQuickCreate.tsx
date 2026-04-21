@@ -1,5 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "../../ui/calendar";
@@ -17,9 +16,13 @@ import {
   CommandItem,
   CommandList,
 } from "../../ui/command";
-import { Check, X, CornersOut, Star, CalendarBlank, UserCircle, Spinner, List, Paperclip, Microphone, Rows, ChartBar, Tag } from "@phosphor-icons/react/dist/ssr";
+import { Check, X, CalendarBlank, UserCircle, Spinner, List, Paperclip, Microphone, Rows, ChartBar, Tag } from "@phosphor-icons/react/dist/ssr";
 import { ProjectDescriptionEditor } from "../ProjectDescriptionEditor";
 import { clients, type Client } from "@/lib/data/clients";
+
+// IMPORT PIPA DATABASE DAN NOTIFIKASI
+import { createProjectInDB } from "@/lib/data/project-actions";
+import { toast } from "sonner";
 
 // --- Mock Data ---
 
@@ -67,26 +70,15 @@ const TAGS = [
 
 // --- Helper Components ---
 
-function Wrapper({
-  children,
-  className,
-}: React.PropsWithChildren<{ className?: string }>) {
+function Wrapper({ children, className }: React.PropsWithChildren<{ className?: string }>) {
   return (
-    <div
-      className={cn("relative shrink-0 size-[16px]", className)}
-    >
-      <svg
-        className="block size-full"
-        fill="none"
-        preserveAspectRatio="none"
-        viewBox="0 0 16 16"
-      >
+    <div className={cn("relative shrink-0 size-[16px]", className)}>
+      <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 16 16">
         {children}
       </svg>
     </div>
   );
 }
-
 
 // --- Pickers ---
 
@@ -99,9 +91,7 @@ interface PickerProps<T> {
   renderItem: (item: T, isSelected: boolean) => React.ReactNode;
 }
 
-export function GenericPicker<
-  T extends { id: string; label?: string; name?: string },
->({
+export function GenericPicker<T extends { id: string; label?: string; name?: string }>({
   trigger,
   items,
   onSelect,
@@ -147,11 +137,7 @@ interface DatePickerProps {
   trigger: React.ReactNode;
 }
 
-export function DatePicker({
-  date,
-  onSelect,
-  trigger,
-}: DatePickerProps) {
+export function DatePicker({ date, onSelect, trigger }: DatePickerProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -176,76 +162,90 @@ export function DatePicker({
 
 interface StepQuickCreateProps {
   onClose: () => void;
-  onCreate: () => void;
+  onCreate: () => void; // Kita panggil ini SETELAH berhasil simpan ke DB
   onExpandChange?: (isExpanded: boolean) => void;
 }
 
-export function StepQuickCreate({
-  onClose,
-  onCreate,
-  onExpandChange,
-}: StepQuickCreateProps) {
+export function StepQuickCreate({ onClose, onCreate, onExpandChange }: StepQuickCreateProps) {
   const [title, setTitle] = useState("");
-  // Description is now managed by Tiptap editor
+  // Description dikelola oleh Tiptap Editor, tapi untuk versi sederhana kita bypass dulu.
 
   // Data State
   const [assignee, setAssignee] = useState(USERS[0]);
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    new Date(),
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [status, setStatus] = useState(STATUSES[1]); // Todo default
-  const [sprintType, setSprintType] = useState<
-    (typeof SPRINT_TYPES)[0] | null
-  >(null);
-  const [targetDate, setTargetDate] = useState<
-    Date | undefined
-  >();
-  const [workstream, setWorkstream] = useState<
-    (typeof WORKSTREAMS)[0] | null
-  >(null);
-  const [priority, setPriority] = useState<
-    (typeof PRIORITIES)[0] | null
-  >(null);
-  const [selectedTag, setSelectedTag] = useState<
-    (typeof TAGS)[0] | null
-  >(null);
+  const [sprintType, setSprintType] = useState<(typeof SPRINT_TYPES)[0] | null>(null);
+  const [targetDate, setTargetDate] = useState<Date | undefined>();
+  const [workstream, setWorkstream] = useState<(typeof WORKSTREAMS)[0] | null>(null);
+  const [priority, setPriority] = useState<(typeof PRIORITIES)[0] | null>(null);
+  const [selectedTag, setSelectedTag] = useState<(typeof TAGS)[0] | null>(null);
   const [client, setClient] = useState<Client | null>(null);
 
+  // STATE LOADING UNTUK TOMBOL
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
-    // Focus title on mount
     const timer = setTimeout(() => {
-      const titleInput = document.getElementById(
-        "quick-create-title",
-      );
+      const titleInput = document.getElementById("quick-create-title");
       if (titleInput) titleInput.focus();
     }, 100);
     return () => clearTimeout(timer);
   }, []);
 
+  // FUNGSI UNTUK MENYIMPAN KE SUPABASE
+  const handleSaveToDatabase = async () => {
+    // Validasi Sederhana
+    if (!title.trim()) {
+      toast.error("Nama Proyek tidak boleh kosong!");
+      return;
+    }
+
+    if (!startDate || !targetDate) {
+      toast.error("Start Date dan Target Date wajib diisi!");
+      return;
+    }
+
+    if (targetDate < startDate) {
+      toast.error("Target Date tidak boleh lebih kecil dari Start Date!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Panggil fungsi yang ada di project-actions.ts
+      await createProjectInDB({
+        name: title,
+        priority: (priority?.id as any) || "medium",
+        startDate: startDate.toISOString(),
+        endDate: targetDate.toISOString(),
+      });
+
+      toast.success("Proyek berhasil disimpan ke Database!");
+      
+      // Panggil onCreate dari induk untuk menutup popup/menyegarkan data
+      onCreate(); 
+      
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal menyimpan proyek. Periksa koneksi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      onCreate();
+      handleSaveToDatabase();
     }
   };
 
   return (
-    <div
-      className="bg-background relative rounded-3xl size-full font-sans overflow-hidden flex flex-col"
-      onKeyDown={handleKeyDown}
-    >
-      {/* Close Button */}
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onClose}
-        className="absolute right-4 top-3 opacity-70 hover:opacity-100 rounded-xl"
-      >
+    <div className="bg-background relative rounded-3xl size-full font-sans overflow-hidden flex flex-col" onKeyDown={handleKeyDown}>
+      <Button type="button" variant="ghost" size="icon" onClick={onClose} className="absolute right-4 top-3 opacity-70 hover:opacity-100 rounded-xl">
         <X className="size-4 text-muted-foreground" />
       </Button>
 
       <div className="flex flex-col flex-1 p-3.5 px-4 gap-3.5 overflow-hidden">
-        {/* Title Input */}
         <div className="flex flex-col gap-2 w-full shrink-0 mt-2">
           <div className="flex gap-1 h-10 items-center w-full">
             <input
@@ -260,12 +260,9 @@ export function StepQuickCreate({
           </div>
         </div>
 
-        {/* Description Area (Tiptap) */}
         <ProjectDescriptionEditor onExpandChange={onExpandChange} />
 
-        {/* Property Buttons - Interactive Dropdowns */}
         <div className="flex flex-wrap gap-2.5 items-start w-full shrink-0">
-          {/* Owner Picker */}
           <GenericPicker
             items={USERS}
             onSelect={setAssignee}
@@ -274,15 +271,9 @@ export function StepQuickCreate({
             renderItem={(item, isSelected) => (
               <div className="flex items-center gap-2 w-full">
                 {item.avatar ? (
-                  <img
-                    src={item.avatar}
-                    alt=""
-                    className="size-5 rounded-full object-cover"
-                  />
+                  <img src={item.avatar} alt="" className="size-5 rounded-full object-cover" />
                 ) : (
-                  <div className="size-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                    {item.name.charAt(0)}
-                  </div>
+                  <div className="size-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{item.name.charAt(0)}</div>
                 )}
                 <span className="flex-1">{item.name}</span>
                 {isSelected && <Check className="size-4" />}
@@ -292,25 +283,16 @@ export function StepQuickCreate({
               <button className="bg-muted flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:border-primary/50 transition-colors">
                 <div className="relative rounded-full size-4 overflow-hidden">
                   {assignee.avatar ? (
-                    <img
-                      alt=""
-                      className="object-cover size-full"
-                      src={assignee.avatar}
-                    />
+                    <img alt="" className="object-cover size-full" src={assignee.avatar} />
                   ) : (
-                    <div className="bg-muted size-full flex items-center justify-center text-xs">
-                      {assignee.name.charAt(0)}
-                    </div>
+                    <div className="bg-muted size-full flex items-center justify-center text-xs">{assignee.name.charAt(0)}</div>
                   )}
                 </div>
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {assignee.name}
-                </span>
+                <span className="font-medium text-foreground text-sm leading-5">{assignee.name}</span>
               </button>
             }
           />
 
-          {/* Start Date Picker */}
           <DatePicker
             date={startDate}
             onSelect={setStartDate}
@@ -318,15 +300,12 @@ export function StepQuickCreate({
               <button className="bg-muted flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:border-primary/50 transition-colors">
                 <CalendarBlank className="size-4 text-muted-foreground" />
                 <span className="font-medium text-foreground text-sm leading-5">
-                  {startDate
-                    ? `Start: ${format(startDate, "dd/MM/yyyy")}`
-                    : "Start Date"}
+                  {startDate ? `Start: ${format(startDate, "dd/MM/yyyy")}` : "Start Date"}
                 </span>
               </button>
             }
           />
 
-          {/* Client Picker */}
           <GenericPicker
             items={clients}
             onSelect={setClient}
@@ -334,31 +313,19 @@ export function StepQuickCreate({
             placeholder="Assign client..."
             renderItem={(item, isSelected) => (
               <div className="flex items-center gap-2 w-full">
-                <div className="size-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
-                  {item.name.charAt(0)}
-                </div>
+                <div className="size-5 rounded-full bg-muted flex items-center justify-center text-xs font-bold">{item.name.charAt(0)}</div>
                 <span className="flex-1">{item.name}</span>
                 {isSelected && <Check className="size-4" />}
               </div>
             )}
             trigger={
-              <button
-                className={cn(
-                  "flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border transition-colors",
-                  client
-                    ? "bg-muted"
-                    : "bg-background hover:bg-black/5",
-                )}
-              >
+              <button className={cn("flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border transition-colors", client ? "bg-muted" : "bg-background hover:bg-black/5")}>
                 <UserCircle className="size-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {client ? client.name : "Client"}
-                </span>
+                <span className="font-medium text-foreground text-sm leading-5">{client ? client.name : "Client"}</span>
               </button>
             }
           />
 
-          {/* Status Picker */}
           <GenericPicker
             items={STATUSES}
             onSelect={setStatus}
@@ -372,64 +339,13 @@ export function StepQuickCreate({
               </div>
             )}
             trigger={
-              <button
-                className={cn(
-                  "flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border transition-colors",
-                  "bg-background hover:bg-black/5",
-                )}
-              >
-                <Wrapper>
-                  <g
-                    clipPath="url(#clip0_13_2475)"
-                    id="Icon / Loader"
-                  >
-                  <Spinner className="size-4 text-muted-foreground" />
-                  </g>
-                  <defs>
-                    <clipPath id="clip0_13_2475">
-                      <rect
-                        fill="white"
-                        height="16"
-                        width="16"
-                      />
-                    </clipPath>
-                  </defs>
-                </Wrapper>
-                {status.id !== "backlog" && (
-                  <div className={cn("size-2 rounded-full", (status as any).dotClass)} />
-                )}
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {status.label}
-                </span>
+              <button className={cn("flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border transition-colors", "bg-background hover:bg-black/5")}>
+                {status.id !== "backlog" && <div className={cn("size-2 rounded-full", (status as any).dotClass)} />}
+                <span className="font-medium text-foreground text-sm leading-5">{status.label}</span>
               </button>
             }
           />
 
-          {/* Sprint Type Picker */}
-          <GenericPicker
-            items={SPRINT_TYPES}
-            onSelect={setSprintType}
-            selectedId={sprintType?.id}
-            placeholder="Select sprint type..."
-            renderItem={(item, isSelected) => (
-              <div className="flex items-center gap-2 w-full">
-                <span className="flex-1">{item.label}</span>
-                {isSelected && <Check className="size-4" />}
-              </div>
-            )}
-            trigger={
-              <button className="bg-background flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:bg-black/5 transition-colors">
-                <List className="size-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {sprintType
-                    ? sprintType.label
-                    : "Sprint Type"}
-                </span>
-              </button>
-            }
-          />
-
-          {/* Target Date Picker */}
           <DatePicker
             date={targetDate}
             onSelect={setTargetDate}
@@ -437,39 +353,12 @@ export function StepQuickCreate({
               <button className="bg-background flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:bg-black/5 transition-colors">
                 <CalendarBlank className="size-4 text-muted-foreground" />
                 <span className="font-medium text-foreground text-sm leading-5">
-                  {targetDate
-                    ? format(targetDate, "dd/MM/yyyy")
-                    : "Target"}
+                  {targetDate ? `End: ${format(targetDate, "dd/MM/yyyy")}` : "End Date"}
                 </span>
               </button>
             }
           />
 
-          {/* Workstreams Picker */}
-          <GenericPicker
-            items={WORKSTREAMS}
-            onSelect={setWorkstream}
-            selectedId={workstream?.id}
-            placeholder="Select workstream..."
-            renderItem={(item, isSelected) => (
-              <div className="flex items-center gap-2 w-full">
-                <span className="flex-1">{item.label}</span>
-                {isSelected && <Check className="size-4" />}
-              </div>
-            )}
-            trigger={
-              <button className="bg-background flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:bg-black/5 transition-colors">
-                <Rows className="size-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {workstream
-                    ? workstream.label
-                    : "Workstreams"}
-                </span>
-              </button>
-            }
-          />
-
-          {/* Priority Picker */}
           <GenericPicker
             items={PRIORITIES}
             onSelect={setPriority}
@@ -484,51 +373,7 @@ export function StepQuickCreate({
             trigger={
               <button className="bg-background flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:bg-black/5 transition-colors">
                 <ChartBar className="size-4 text-muted-foreground" />
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {priority ? priority.label : "Priority"}
-                </span>
-              </button>
-            }
-          />
-
-          {/* Tag Picker */}
-          <GenericPicker
-            items={TAGS}
-            onSelect={setSelectedTag}
-            selectedId={selectedTag?.id}
-            placeholder="Add tag..."
-            renderItem={(item, isSelected) => (
-              <div className="flex items-center gap-2 w-full">
-                <div
-                  className="size-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="flex-1">{item.label}</span>
-                {isSelected && <Check className="size-4" />}
-              </div>
-            )}
-            trigger={
-              <button className="bg-background flex gap-2 h-9 items-center px-3 py-2 rounded-lg border border-border hover:bg-black/5 transition-colors">
-                <Wrapper>
-                  <g
-                    clipPath="url(#clip0_13_2458)"
-                    id="Icon / Tag"
-                  >
-                    <Tag className="size-4 text-muted-foreground" />
-                  </g>
-                  <defs>
-                    <clipPath id="clip0_13_2458">
-                      <rect
-                        fill="white"
-                        height="16"
-                        width="16"
-                      />
-                    </clipPath>
-                  </defs>
-                </Wrapper>
-                <span className="font-medium text-foreground text-sm leading-5">
-                  {selectedTag ? selectedTag.label : "Tag"}
-                </span>
+                <span className="font-medium text-foreground text-sm leading-5">{priority ? priority.label : "Priority"}</span>
               </button>
             }
           />
@@ -540,17 +385,18 @@ export function StepQuickCreate({
             <button className="flex items-center justify-center size-10 rounded-lg hover:bg-black/5 transition-colors cursor-pointer">
               <Paperclip className="size-4 text-muted-foreground" />
             </button>
-            <button className="flex items-center justify-center size-10 rounded-lg hover:bg-black/5 transition-colors cursor-pointer">
-              <Microphone className="size-4 text-muted-foreground" />
-            </button>
           </div>
 
           <button
-            onClick={onCreate}
-            className="bg-primary hover:bg-primary/90 flex gap-3 h-10 items-center justify-center px-4 py-2 rounded-lg transition-colors cursor-pointer"
+            onClick={handleSaveToDatabase}
+            disabled={isSubmitting}
+            className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed flex gap-3 h-10 items-center justify-center px-4 py-2 rounded-lg transition-colors cursor-pointer"
           >
+            {isSubmitting ? (
+               <Spinner className="size-4 animate-spin text-primary-foreground" />
+            ) : null}
             <span className="font-medium text-primary-foreground text-sm leading-5">
-              Create Project
+              {isSubmitting ? "Menyimpan..." : "Create Project"}
             </span>
           </button>
         </div>

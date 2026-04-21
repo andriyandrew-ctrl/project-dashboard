@@ -8,635 +8,226 @@ function addDays(base: Date, days: number): Date {
   return d
 }
 
-export type User = {
-  id: string
-  name: string
-  avatarUrl?: string
-  role?: string
+// 1. TIPE DATA DASAR
+export type User = { id: string; name: string; avatarUrl?: string; role?: string }
+export type ProjectMeta = { priorityLabel: string; locationLabel: string; sprintLabel: string; lastSyncLabel: string }
+export type ProjectScope = { inScope: string[]; outOfScope: string[] }
+
+// 2. TIPE DATA BARU UNTUK R&D & MANUFAKTUR
+export type RndTargets = {
+  intentLabel: string;
+  successTypeLabel: string;
+  targetProduksi: string;
+  targetRevenue: string;
+  kpiDescription: string;
+  structureType: string;
 }
 
-export type ProjectMeta = {
-  priorityLabel: string
-  locationLabel: string
-  sprintLabel: string
-  lastSyncLabel: string
-}
-
-export type ProjectScope = {
-  inScope: string[]
-  outOfScope: string[]
-}
-
-export type KeyFeatures = {
-  p0: string[]
-  p1: string[]
-  p2: string[]
-}
-
-export type TimelineTask = {
-  id: string
-  name: string
-  startDate: Date
-  endDate: Date
-  status: "planned" | "in-progress" | "done"
-}
-
+// 3. TIPE DATA TASK & WORKSTREAM
+export type TimelineTask = { id: string; name: string; startDate: Date; endDate: Date; status: "planned" | "in-progress" | "done" }
 export type WorkstreamTaskStatus = "todo" | "in-progress" | "done"
 
-export type WorkstreamTask = {
-  id: string
-  name: string
-  status: WorkstreamTaskStatus
-  dueLabel?: string
-  dueTone?: "danger" | "warning" | "muted"
-  assignee?: User
-  /** Optional start date for the task (used in task views). */
-  startDate?: Date
-  /** Optional priority identifier for the task. */
-  priority?: "no-priority" | "low" | "medium" | "high" | "urgent"
-  /** Optional tag label for the task (e.g. Feature, Bug). */
-  tag?: string
-  /** Optional short description used in task lists. */
-  description?: string
-}
+// REVISI: Menambahkan "neutral" ke dalam dueTone
+export type WorkstreamTask = { id: string; name: string; status: WorkstreamTaskStatus; dueLabel?: string; dueTone?: "danger" | "warning" | "muted" | "neutral"; assignee?: User; startDate?: Date; priority?: "no-priority" | "low" | "medium" | "high" | "urgent"; tag?: string; description?: string }
+export type WorkstreamGroup = { id: string; name: string; tasks: WorkstreamTask[] }
+export type ProjectTask = WorkstreamTask & { projectId: string; projectName: string; workstreamId: string; workstreamName: string }
 
-export type WorkstreamGroup = {
-  id: string
-  name: string
-  tasks: WorkstreamTask[]
-}
+export type TimeSummary = { estimateLabel: string; dueDate: Date; daysRemainingLabel: string; progressPercent: number }
+export type BacklogSummary = { statusLabel: "Active" | "Backlog" | "Planned" | "Completed" | "Cancelled"; groupLabel: string; priorityLabel: string; labelBadge: string; picUsers: User[]; supportUsers?: User[] }
 
-export type ProjectTask = WorkstreamTask & {
-  projectId: string
-  projectName: string
-  workstreamId: string
-  workstreamName: string
-}
-
-export type TimeSummary = {
-  estimateLabel: string
-  dueDate: Date
-  daysRemainingLabel: string
-  progressPercent: number
-}
-
-export type BacklogSummary = {
-  statusLabel: "Active" | "Backlog" | "Planned" | "Completed" | "Cancelled"
-  groupLabel: string
-  priorityLabel: string
-  labelBadge: string
-  picUsers: User[]
-  supportUsers?: User[]
-}
-
-export type QuickLink = {
-  id: string
-  name: string
-  type: "pdf" | "zip" | "fig" | "doc" | "file"
-  sizeMB: number
-  url: string
-}
-
-export type ProjectFile = QuickLink & {
-  addedBy: User
-  addedDate: Date
-  description?: string
-  isLinkAsset?: boolean
-  attachments?: QuickLink[]
-}
+// REVISI: Memperluas kamus tipe file agar mendukung dwg, xlsx, dll.
+export type QuickLink = { id: string; name: string; type: "pdf" | "zip" | "fig" | "doc" | "file" | "dwg" | "xlsx" | "csv" | "img"; sizeMB: number; url: string }
+export type ProjectFile = QuickLink & { addedBy: User; addedDate: Date; description?: string; isLinkAsset?: boolean; attachments?: QuickLink[] }
 
 export type NoteType = "general" | "meeting" | "audio"
 export type NoteStatus = "completed" | "processing"
+export type TranscriptSegment = { id: string; speaker: string; timestamp: string; text: string }
+export type AudioNoteData = { duration: string; fileName: string; aiSummary: string; keyPoints: string[]; insights: string[]; transcript: TranscriptSegment[] }
+export type ProjectNote = { id: string; title: string; content?: string; noteType: NoteType; status: NoteStatus; addedDate: Date; addedBy: User; audioData?: AudioNoteData }
 
-export type TranscriptSegment = {
-  id: string
-  speaker: string
-  timestamp: string
-  text: string
-}
+// Legacy Types
+export type KeyFeatures = { p0: string[]; p1: string[]; p2: string[] }
 
-export type AudioNoteData = {
-  duration: string
-  fileName: string
-  aiSummary: string
-  keyPoints: string[]
-  insights: string[]
-  transcript: TranscriptSegment[]
-}
-
-export type ProjectNote = {
-  id: string
-  title: string
-  content?: string
-  noteType: NoteType
-  status: NoteStatus
-  addedDate: Date
-  addedBy: User
-  audioData?: AudioNoteData
-}
-
-export type ProjectDetails = {
-  id: string
-  name: string
-  description: string
-  meta: ProjectMeta
-  scope: ProjectScope
-  outcomes: string[]
-  keyFeatures: KeyFeatures
-  timelineTasks: TimelineTask[]
-  workstreams: WorkstreamGroup[]
-  time: TimeSummary
-  backlog: BacklogSummary
-  quickLinks: QuickLink[]
-  files: ProjectFile[]
-  notes: ProjectNote[]
-  source?: ProjectListItem
+// TIPE DATA UTAMA PROJECT DETAILS
+export type ProjectDetails = { 
+  id: string; 
+  name: string; 
+  description: string; 
+  meta: ProjectMeta; 
+  scope: ProjectScope; 
+  targets: RndTargets; 
+  timelineTasks: TimelineTask[]; 
+  workstreams: WorkstreamGroup[]; 
+  time: TimeSummary; 
+  backlog: BacklogSummary; 
+  quickLinks: QuickLink[]; 
+  files: ProjectFile[]; 
+  notes: ProjectNote[]; 
+  source?: ProjectListItem;
+  outcomes?: string[]; 
+  keyFeatures?: KeyFeatures; 
 }
 
 export function getProjectTasks(details: ProjectDetails): ProjectTask[] {
   const workstreams = details.workstreams ?? []
-
   return workstreams.flatMap((group) =>
     group.tasks.map((task) => ({
-      ...task,
-      projectId: details.id,
-      projectName: details.name,
-      workstreamId: group.id,
-      workstreamName: group.name,
+      ...task, projectId: details.id, projectName: details.name, workstreamId: group.id, workstreamName: group.name,
     })),
   )
 }
 
 function userFromName(name: string, role?: string): User {
-  return {
-    id: name.trim().toLowerCase().replace(/\s+/g, "-"),
-    name,
-    avatarUrl: getAvatarUrl(name),
-    role,
-  }
+  return { id: name.trim().toLowerCase().replace(/\s+/g, "-"), name, avatarUrl: getAvatarUrl(name), role }
 }
 
 function baseDetailsFromListItem(p: ProjectListItem): ProjectDetails {
-  const picUsers = p.members.length ? p.members.map((n) => userFromName(n, "PIC")) : [userFromName("Jason Duong", "PIC")]
+  const picUsers = p.assignees && p.assignees.length > 0
+    ? p.assignees.map((a) => userFromName(a.name, "PIC")) 
+    : []
+    
   const today = new Date()
+
+  // DUMMY DATA WORKSTREAM
+  const defaultWorkstreams: WorkstreamGroup[] = [
+    {
+      id: "ws-1",
+      name: "Phase 1: Engineering & Design (DED)",
+      tasks: [
+        { id: "t-1", name: "Survei Lokasi & Pengukuran", status: "done", priority: "high", assignee: userFromName("Mohammad Ivan Effendy Putra") },
+        { id: "t-2", name: "Persetujuan Gambar Kerja (Client)", status: "in-progress", priority: "urgent", dueLabel: "2 Days", dueTone: "danger" }
+      ]
+    },
+    {
+      id: "ws-2",
+      name: "Phase 2: Procurement (Pengadaan)",
+      tasks: [
+        { id: "t-3", name: "PO Material Baja WF & Pelat", status: "todo", priority: "high", assignee: userFromName("Shafa Aldanissya Imron") },
+        { id: "t-4", name: "Kedatangan Mesin / Pompa Tambang", status: "todo", priority: "medium" }
+      ]
+    },
+    {
+      id: "ws-3",
+      name: "Phase 3: Pabrikasi & Konstruksi",
+      tasks: [
+        { id: "t-5", name: "Cutting & Welding Struktur Utama", status: "todo", priority: "medium" },
+        { id: "t-6", name: "Inspeksi Quality Control (NDT)", status: "todo", priority: "high" }
+      ]
+    }
+  ];
 
   return {
     id: p.id,
     name: p.name,
-    description: p.client
-      ? `Project for ${p.client}. This is mock content that will be replaced by API later.`
-      : "This is mock content that will be replaced by API later.",
+    description: p.description ?? "Deskripsi proyek belum tersedia.",
     meta: {
       priorityLabel: p.priority.charAt(0).toUpperCase() + p.priority.slice(1),
-      locationLabel: "Australia",
-      sprintLabel: p.typeLabel && p.durationLabel ? `${p.typeLabel} ${p.durationLabel}` : p.durationLabel ?? "MVP 2 weeks",
+      locationLabel: "Cilegon, Indonesia", 
+      sprintLabel: "Fase Eksekusi",
       lastSyncLabel: "Just now",
     },
     scope: {
-      inScope: ["Define scope", "Draft solution", "Validate with stakeholders", "Prepare handoff"],
-      outOfScope: ["Backend logic changes", "Marketing landing pages"],
+      inScope: ["Pembangunan fasilitas utama", "Instalasi mesin & kelistrikan", "Testing & Commissioning"],
+      outOfScope: ["Izin Lokasi (Client)", "Operasional Komersial & Marketing"],
     },
-    outcomes: ["Reduce steps and improve usability", "Increase success rate", "Deliver production-ready UI"],
-    keyFeatures: {
-      p0: ["Core user flow"],
-      p1: ["Filters and empty states"],
-      p2: ["Visual polish"],
+    targets: {
+      intentLabel: "Delivery (Eksekusi Proyek)",
+      successTypeLabel: "Berbasis Deliverable",
+      targetProduksi: "150 Ton / Bulan",
+      targetRevenue: "Rp 2.5 Miliar",
+      kpiDescription: "Selesainya fabrikasi 1 line konveyor dengan scrap rate di bawah 2%",
+      structureType: "Milestone-based (Fase Bertahap)"
     },
-    workstreams: [
-      {
-        id: `${p.id}-ws-1`,
-        name: "Initial discovery & alignment",
-        tasks: [
-          {
-            id: `${p.id}-ws-1-t1`,
-            name: "Kickoff with stakeholders",
-            status: "done",
-            dueLabel: "Today",
-            dueTone: "muted",
-            assignee: picUsers[0],
-            startDate: today,
-          },
-          {
-            id: `${p.id}-ws-1-t2`,
-            name: "Define problem statement",
-            status: "in-progress",
-            dueLabel: "Tomorrow",
-            dueTone: "warning",
-            assignee: picUsers[0],
-            startDate: addDays(today, 1),
-          },
-          {
-            id: `${p.id}-ws-1-t3`,
-            name: "Collect existing assets",
-            status: "todo",
-            startDate: addDays(today, 2),
-          },
-        ],
-      },
-      {
-        id: `${p.id}-ws-2`,
-        name: "Design & validation",
-        tasks: [
-          {
-            id: `${p.id}-ws-2-t1`,
-            name: "Draft wireframes",
-            status: "todo",
-            startDate: addDays(today, 3),
-          },
-          {
-            id: `${p.id}-ws-2-t2`,
-            name: "Review with team",
-            status: "todo",
-            startDate: addDays(today, 4),
-          },
-        ],
-      },
-    ],
-    timelineTasks: [
-      {
-        id: `${p.id}-t1`,
-        name: "Audit existing flows",
-        startDate: new Date(2025, 11, 22), // Mon
-        endDate: new Date(2025, 11, 23),   // Tue
-        status: "done",
-      },
-      {
-        id: `${p.id}-t2`,
-        name: "Redesign onboarding & payment",
-        startDate: new Date(2025, 11, 23), // Tue
-        endDate: new Date(2025, 11, 25),   // Thu
-        status: "in-progress",
-      },
-      {
-        id: `${p.id}-t3`,
-        name: "Usability testing",
-        startDate: new Date(2025, 11, 25), // Thu
-        endDate: new Date(2025, 11, 27),   // Sat
-        status: "planned",
-      },
-      {
-        id: `${p.id}-t4`,
-        name: "Iterate based on feedback",
-        startDate: new Date(2025, 11, 27), // Sat
-        endDate: new Date(2025, 11, 28),   // Sun
-        status: "planned",
-      },
-    ],
+    workstreams: defaultWorkstreams,
+    timelineTasks: [],
     time: {
-      estimateLabel: "1 months",
-      dueDate: new Date(2025, 11, 31),
-      daysRemainingLabel: "21 Days to go",
-      progressPercent: 75,
+      estimateLabel: "2 Bulan",
+      dueDate: addDays(today, 60),
+      daysRemainingLabel: "60 Hari lagi",
+      progressPercent: Math.floor(Math.random() * 60) + 10,
     },
     backlog: {
       statusLabel: "Active",
       groupLabel: "None",
       priorityLabel: p.priority.charAt(0).toUpperCase() + p.priority.slice(1),
-      labelBadge: "Design",
-      picUsers,
-      supportUsers: [userFromName("Support", "Support")],
+      labelBadge: "Engineering",
+      picUsers, 
+      supportUsers: p.client ? [userFromName(p.client, "Partner")] : [], 
     },
-    quickLinks: [],
-    files: [],
+    quickLinks: [], 
+    
+    // DATA DUMMY UNTUK TAB ASSETS & FILES
+    files: [
+      {
+        id: "file-1",
+        name: "DED_Konveyor_Utama_V2.dwg",
+        type: "dwg",
+        sizeMB: 14.5,
+        url: "#",
+        addedBy: userFromName("Mohammad Ivan Effendy Putra"),
+        addedDate: new Date(),
+        description: "Gambar kerja detail revisi terbaru"
+      },
+      {
+        id: "file-2",
+        name: "RAB_Pengadaan_Material.xlsx",
+        type: "xlsx",
+        sizeMB: 2.1,
+        url: "#",
+        addedBy: userFromName("Shafa Aldanissya Imron"),
+        addedDate: addDays(new Date(), -2),
+        description: "Estimasi budget material pelat baja"
+      },
+      {
+        id: "file-3",
+        name: "Spesifikasi_Motor_Drive.pdf",
+        type: "pdf",
+        sizeMB: 5.8,
+        url: "#",
+        addedBy: userFromName("Andri Setyawan"),
+        addedDate: addDays(new Date(), -5)
+      }
+    ], 
+    
+    // DATA DUMMY UNTUK TAB NOTES / LOGS
     notes: [
       {
-        id: `${p.id}-note-1`,
-        title: "Project review",
-        noteType: "audio",
-        status: "completed",
-        addedDate: new Date(2025, 6, 12),
-        addedBy: picUsers[0],
-        audioData: {
-          duration: "00:02:21",
-          fileName: "project-review-meeting.mp3",
-          aiSummary: "The meeting involved a review of ongoing projects and the planning of next steps. The team discussed user testing for the week to gather feedback before deciding on new features and tasks for the next phase. Contract payments and design considerations for the landing page were also addressed.",
-          keyPoints: [
-            "User testing scheduled for this week",
-            "New features to be decided after feedback",
-            "Contract payment timeline confirmed",
-            "Landing page design in progress",
-          ],
-          insights: [
-            "Team alignment on priorities is strong",
-            "Need more clarity on feature scope",
-            "Design review needed before development",
-          ],
-          transcript: [
-            { id: "t1", speaker: "SPK_1", timestamp: "0:00", text: "Co-founder should be joining on in a sec, but I kind of caught him up to speed on what we talked about last time." },
-            { id: "t2", speaker: "SPK_2", timestamp: "0:15", text: "Kind of where Bino is, what type of help we ideally are looking for and then you know, if you are interested, a type of work trial moving forward, what that would look like." },
-            { id: "t3", speaker: "SPK_1", timestamp: "0:22", text: "So today, really hoping to kind of go through some of those details and also like, if you have any insights on Bino as well as some design and suggestions that you have, we'd love to kind of talk through those as well." },
-            { id: "t4", speaker: "SPK_2", timestamp: "0:38", text: "Okay, sure." },
-            { id: "t5", speaker: "SPK_3", timestamp: "0:43", text: "Sounds good." },
-            { id: "t6", speaker: "SPK_1", timestamp: "0:55", text: "So yeah, we can give him a sec." },
-            { id: "t7", speaker: "SPK_2", timestamp: "1:00", text: "I think he should be drawing, but he doesn't." },
-          ],
-        },
-      },
-      {
-        id: `${p.id}-note-2`,
-        title: "Meeting note",
+        id: "note-1",
+        title: "MoM Kickoff Meeting dengan Pemda",
+        content: "Kesepakatan awal terkait timeline konstruksi dan batas area kerja (scope of work). Pemda meminta percepatan di Fase 1.",
         noteType: "meeting",
         status: "completed",
-        addedDate: new Date(2024, 8, 18),
-        addedBy: picUsers[0],
-        content:
-          "Discussion about current sprint goals, open issues, and next steps for the design handoff.",
+        addedDate: addDays(today, -10),
+        addedBy: userFromName("Andri Setyawan")
       },
       {
-        id: `${p.id}-note-3`,
-        title: "Client feedback",
+        id: "note-2",
+        title: "Issue Log: Keterlambatan Pengiriman Baja",
+        content: "Vendor PT ABC melaporkan adanya delay pengiriman pelat baja 4mm karena cuaca buruk di pelabuhan. Estimasi mundur 3 hari.",
         noteType: "general",
-        status: "completed",
-        addedDate: new Date(2024, 8, 18),
-        addedBy: picUsers[0],
-        content:
-          "Client shared feedback on the latest homepage iteration. Main concern is clarity of the hero copy.",
-      },
-      {
-        id: `${p.id}-note-4`,
-        title: "Internal brainstorm",
-        noteType: "general",
-        status: "completed",
-        addedDate: new Date(2024, 8, 17),
-        addedBy: picUsers[0],
-        content:
-          "Ideas for onboarding improvements, including checklists, progress indicators, and inline tips.",
-      },
-      {
-        id: `${p.id}-note-5`,
-        title: "Hero Description",
-        noteType: "general",
-        status: "completed",
-        addedDate: new Date(2024, 8, 17),
-        addedBy: picUsers[0],
-        content:
-          "Copy options for the hero section headline and supporting description for A/B testing.",
-      },
-      {
-        id: `${p.id}-note-6`,
-        title: "Trade-off",
-        noteType: "meeting",
         status: "processing",
-        addedDate: new Date(2024, 8, 17),
-        addedBy: picUsers[0],
-        content:
-          "Notes about trade-offs between performance and flexibility for the new dashboard widgets.",
-      },
-      {
-        id: `${p.id}-note-7`,
-        title: "Roadmap",
-        noteType: "general",
-        status: "completed",
-        addedDate: new Date(2024, 8, 16),
-        addedBy: picUsers[0],
-        content:
-          "High-level roadmap for the next two quarters focusing on analytics and collaboration features.",
-      },
-      {
-        id: `${p.id}-note-8`,
-        title: "Brainstorm",
-        noteType: "general",
-        status: "completed",
-        addedDate: new Date(2024, 8, 16),
-        addedBy: picUsers[0],
-        content:
-          "Rough brainstorming around potential integrations and automation opportunities.",
-      },
-    ],
+        addedDate: addDays(today, -1),
+        addedBy: userFromName("Shafa Aldanissya Imron")
+      }
+    ], 
+    
     source: p,
+    outcomes: ["Selesai tepat waktu", "Lulus uji spesifikasi material"],
+    keyFeatures: { p0: ["Sistem Mekanikal"], p1: ["Sistem Kelistrikan"], p2: ["Finishing"] },
   }
 }
 
 export function getProjectDetailsById(id: string): ProjectDetails {
   const base = projects.find((p) => p.id === id)
-
-  const effectiveBase: ProjectListItem =
-    base ?? {
-      id,
-      name: `Untitled project ${id}`,
-      taskCount: 0,
-      progress: 0,
-      startDate: new Date(),
-      endDate: new Date(),
-      status: "planned",
-      priority: "medium",
-      tags: [],
-      members: [],
-      tasks: [],
+  const effectiveBase: ProjectListItem = base ?? {
+      id, name: `Untitled project ${id}`, status: "in-progress", priority: "medium", tags: [], assignees: [],
     }
 
   const details = baseDetailsFromListItem(effectiveBase)
 
-  if (base?.id === "1") {
-    details.description =
-      "The internal project aims to optimize user experience and interface for the PM System Core. The goal is to standardize UX, enhance usability, and create a design content repository for daily publication on social media."
-
-    details.scope = {
-      inScope: [
-        "UX research (existing users, light interviews)",
-        "Core flows redesign (Onboarding, Payment, Transaction history)",
-        "Design system (starter components)",
-        "Usability fixes for critical flows",
-      ],
-      outOfScope: ["New feature ideation", "Backend logic changes", "Marketing landing pages"],
-    }
-
-    details.outcomes = [
-      "Reduce payment flow steps from 6 → 4",
-      "Increase task success rate (usability test) from 70% → 90%",
-      "Deliver production-ready UI for MVP build",
-      "Enable dev handoff without design clarification loops",
-    ]
-
-    details.keyFeatures = {
-      p0: ["Onboarding & KYC flow", "Payment confirmation UX"],
-      p1: ["Transaction history & filters", "Error / empty states"],
-      p2: ["Visual polish & motion guidelines"],
-    }
-
-    const primaryAssignee = details.backlog.picUsers[0]
-    const today = new Date()
-
-    const filesBaseDate = new Date(2024, 8, 18)
-
-    const files: ProjectFile[] = [
-      {
-        id: "file-1",
-        name: "Proposal.pdf",
-        type: "pdf",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-      {
-        id: "file-2",
-        name: "Wireframe Layout.zip",
-        type: "zip",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-      {
-        id: "file-3",
-        name: "Design system.fig",
-        type: "fig",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-      {
-        id: "file-4",
-        name: "UI Kit.fig",
-        type: "fig",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-      {
-        id: "file-5",
-        name: "Asset.pdf",
-        type: "pdf",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-      {
-        id: "file-6",
-        name: "Asset.pdf",
-        type: "pdf",
-        sizeMB: 13.0,
-        url: "#",
-        addedBy: primaryAssignee,
-        addedDate: filesBaseDate,
-      },
-    ]
-
-    details.files = files
-
-    details.quickLinks = files.slice(0, 3)
-
-    details.workstreams = [
-      {
-        id: "1-ws-1",
-        name: "Processing documents for signing the deal",
-        tasks: [
-          {
-            id: "1-ws-1-t1",
-            name: "Processing documents for signing the deal",
-            status: "done",
-            dueLabel: "Today",
-            dueTone: "muted",
-            assignee: primaryAssignee,
-            startDate: today,
-          },
-          {
-            id: "1-ws-1-t2",
-            name: "Internal approval & sign-off",
-            status: "todo",
-            dueLabel: "Today",
-            dueTone: "danger",
-            assignee: primaryAssignee,
-            startDate: today,
-          },
-          {
-            id: "1-ws-1-t3",
-            name: "Send contract to client",
-            status: "todo",
-            dueLabel: "Tomorrow",
-            dueTone: "warning",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 1),
-          },
-          {
-            id: "1-ws-1-t4",
-            name: "Track client signature",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 2),
-          },
-        ],
-      },
-      {
-        id: "1-ws-2",
-        name: "Client onboarding setup",
-        tasks: [
-          {
-            id: "1-ws-2-t1",
-            name: "Collect onboarding requirements",
-            status: "in-progress",
-            dueLabel: "This week",
-            dueTone: "muted",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 2),
-          },
-          {
-            id: "1-ws-2-t2",
-            name: "Configure sandbox account",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 3),
-          },
-          {
-            id: "1-ws-2-t3",
-            name: "Schedule onboarding session",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 4),
-          },
-        ],
-      },
-      {
-        id: "1-ws-3",
-        name: "Product wireframe & review",
-        tasks: [
-          {
-            id: "1-ws-3-t1",
-            name: "Prepare low-fidelity wireframes",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 3),
-          },
-          {
-            id: "1-ws-3-t2",
-            name: "Review with stakeholders",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 4),
-          },
-        ],
-      },
-      {
-        id: "1-ws-4",
-        name: "Demo UI Concept",
-        tasks: [
-          {
-            id: "1-ws-4-t1",
-            name: "Prepare clickable prototype",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 4),
-          },
-        ],
-      },
-      {
-        id: "1-ws-5",
-        name: "Feedback and iteration with stakeholders",
-        tasks: [
-          {
-            id: "1-ws-5-t1",
-            name: "Collect feedback from stakeholders",
-            status: "todo",
-            assignee: primaryAssignee,
-            startDate: addDays(today, 5),
-          },
-        ],
-      },
-    ]
+  if (base?.id === "PRJ-01") {
+    details.time.progressPercent = 40;
+    details.time.estimateLabel = "45 Hari";
   }
 
   return details

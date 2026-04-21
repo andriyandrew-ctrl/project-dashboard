@@ -27,14 +27,31 @@ import { cn } from "@/lib/utils"
 import { DraggableBar } from "@/components/project-timeline-draggable-bar"
 import { PriorityGlyphIcon } from "@/components/priority-badge"
 
-// Fixed "today" so the demo stays visually consistent over time.
-// This controls the initial viewport and the vertical "today" line.
+// Tanggal hari ini untuk demo agar konsisten
 const FIXED_TODAY = new Date(2024, 0, 23) // 23 Jan 2024
 
-// projects imported from lib/data
+// FUNGSI PELINDUNG: Mencegah crash jika tanggal kosong atau rusak
+const safeFormatDate = (dateVal: Date | string | undefined | null) => {
+  if (!dateVal) return "TBD"
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? "TBD" : format(d, "dd MMM yyyy")
+}
+
+const safeToInputDate = (dateVal: Date | string | undefined | null) => {
+  if (!dateVal) return ""
+  const d = new Date(dateVal)
+  return isNaN(d.getTime()) ? "" : d.toISOString().split('T')[0]
+}
+
+// Fungsi pembantu untuk konversi string -> Date
+const toSafeDate = (val: string | Date | undefined, fallback: Date = new Date()): Date => {
+  if (!val) return fallback
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? fallback : d
+}
 
 export function ProjectTimeline() {
-  const [projects, setProjects] = useState(initialProjects)
+  const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [expandedProjects, setExpandedProjects] = useState<string[]>(initialProjects.map((p) => p.id))
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month" | "Quarter">("Week")
@@ -45,10 +62,10 @@ export function ProjectTimeline() {
     projectId: string | null
     taskId: string | null
   }>({ isOpen: false, type: null, projectId: null, taskId: null })
+  
   const [editStartDate, setEditStartDate] = useState("")
   const [editEndDate, setEditEndDate] = useState("")
-  // Start the visible range one week before the week of FIXED_TODAY
-  // so the "today" line is not too close to the name column.
+  
   const [viewStartDate, setViewStartDate] = useState(
     () => startOfWeek(addWeeks(FIXED_TODAY, -1), { weekStartsOn: 1 }),
   )
@@ -88,7 +105,6 @@ export function ProjectTimeline() {
     setViewStartDate((d) => (step === 1 ? addWeeks(d, weeksStep) : subWeeks(d, weeksStep)))
   }
 
-  // Generate dates for the timeline
   const getDates = (): Date[] => {
     const daysToRender = viewMode === "Day" ? 21 : viewMode === "Week" ? 60 : viewMode === "Month" ? 90 : 120
     return Array.from({ length: daysToRender }).map((_, i) => addDays(viewStartDate, i))
@@ -96,7 +112,6 @@ export function ProjectTimeline() {
 
   const dates = useMemo(() => getDates(), [viewMode, viewStartDate])
 
-  // Per-day width depends on view for practical Month view
   const baseCellWidth = viewMode === "Day" ? 140 : viewMode === "Week" ? 60 : viewMode === "Month" ? 40 : 20
   const cellWidth = Math.max(20, Math.round(baseCellWidth * zoom))
   const timelineWidth = dates.length * cellWidth
@@ -117,7 +132,6 @@ export function ProjectTimeline() {
     return () => ro.disconnect()
   }, [])
 
-  // Calculate today line position (based on fixed demo date)
   useEffect(() => {
     const offset = differenceInCalendarDays(FIXED_TODAY, dates[0])
     if (offset < 0 || offset >= dates.length) {
@@ -149,7 +163,7 @@ export function ProjectTimeline() {
         if (p.id !== projectId) return p
         return {
           ...p,
-          tasks: p.tasks.map((t) => {
+          tasks: (p.tasks || []).map((t) => {
             if (t.id !== taskId) return t
             return { ...t, status: t.status === "done" ? "todo" : "done" }
           }),
@@ -163,25 +177,35 @@ export function ProjectTimeline() {
       prev.map((p) => {
         if (p.id !== projectId) return p
 
-        const task = p.tasks.find((t) => t.id === taskId)
+        const task = (p.tasks || []).find((t) => t.id === taskId)
         if (!task) return p
 
-        const taskDuration = differenceInCalendarDays(task.endDate, task.startDate) + 1
-        const newEnd = addDays(newStart, taskDuration - 1)
+        const taskOldStart = toSafeDate(task.startDate, newStart)
+        const taskOldEnd = toSafeDate(task.endDate, newStart)
 
-        const needsExpand = newStart < p.startDate || newEnd > p.endDate
+        const taskDuration = differenceInCalendarDays(taskOldEnd, taskOldStart) + 1
+        const newEnd = addDays(newStart, Math.max(1, taskDuration) - 1)
+
+        const projStart = toSafeDate(p.startDate, newStart)
+        const projEnd = toSafeDate(p.endDate, newEnd)
+
+        const needsExpand = newStart < projStart || newEnd > projEnd
         if (needsExpand) {
           showConfirmDialog(
-            "This task is outside the project range. Expand project to fit?",
+            "Pekerjaan ini melewati batas waktu proyek. Perluas batas proyek?",
             () => {
-              setProjects((prev) =>
-                prev.map((proj) => {
+              setProjects((prevProj) =>
+                prevProj.map((proj) => {
                   if (proj.id !== p.id) return proj
+                  
+                  const ps = toSafeDate(proj.startDate, newStart)
+                  const pe = toSafeDate(proj.endDate, newEnd)
+                  
                   return {
                     ...proj,
-                    startDate: newStart < proj.startDate ? newStart : proj.startDate,
-                    endDate: newEnd > proj.endDate ? newEnd : proj.endDate,
-                    tasks: proj.tasks.map((t) => (t.id === taskId ? { ...t, startDate: newStart, endDate: newEnd } : t)),
+                    startDate: (newStart < ps ? newStart : ps).toISOString(),
+                    endDate: (newEnd > pe ? newEnd : pe).toISOString(),
+                    tasks: (proj.tasks || []).map((t) => (t.id === taskId ? { ...t, startDate: newStart.toISOString(), endDate: newEnd.toISOString() } : t)),
                   }
                 })
               )
@@ -192,7 +216,7 @@ export function ProjectTimeline() {
 
         return {
           ...p,
-          tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, startDate: newStart, endDate: newEnd } : t)),
+          tasks: (p.tasks || []).map((t) => (t.id === taskId ? { ...t, startDate: newStart.toISOString(), endDate: newEnd.toISOString() } : t)),
         }
       }),
     )
@@ -204,9 +228,8 @@ export function ProjectTimeline() {
         if (p.id !== projectId) return p
         return {
           ...p,
-          startDate: newStart,
-          endDate: newEnd,
-          tasks: p.tasks, // Keep tasks unchanged for now
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
         }
       }),
     )
@@ -218,7 +241,7 @@ export function ProjectTimeline() {
         if (p.id !== projectId) return p
         return {
           ...p,
-          tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, startDate: newStart, endDate: newEnd } : t)),
+          tasks: (p.tasks || []).map((t) => (t.id === taskId ? { ...t, startDate: newStart.toISOString(), endDate: newEnd.toISOString() } : t)),
         }
       }),
     )
@@ -252,33 +275,39 @@ export function ProjectTimeline() {
       prev.map((p) => {
         if (p.id !== projectId) return p
 
-        const durationDays = differenceInCalendarDays(p.endDate, p.startDate) + 1
-        const newEnd = addDays(newStart, durationDays - 1)
-        const diff = differenceInCalendarDays(newStart, p.startDate)
+        const oldStart = toSafeDate(p.startDate, newStart)
+        const oldEnd = toSafeDate(p.endDate, newStart)
 
-        const shouldMoveChildren = p.tasks.length > 0
+        const durationDays = differenceInCalendarDays(oldEnd, oldStart) + 1
+        const newEnd = addDays(newStart, Math.max(1, durationDays) - 1)
+        const diff = differenceInCalendarDays(newStart, oldStart)
+
+        const shouldMoveChildren = (p.tasks || []).length > 0
         if (shouldMoveChildren && !confirmed) {
           showConfirmDialog(
-            `Move all ${p.tasks.length} tasks along with the project?`,
+            `Pindahkan semua ${(p.tasks || []).length} pekerjaan mengikuti proyek ini?`,
             () => {
-              // Re-run the update with confirmation
               handleUpdateProject(projectId, newStart, true)
             }
           )
-          return p // Don't update yet, wait for confirmation
+          return p 
         }
 
         return {
           ...p,
-          startDate: newStart,
-          endDate: newEnd,
+          startDate: newStart.toISOString(),
+          endDate: newEnd.toISOString(),
           tasks: shouldMoveChildren
-            ? p.tasks.map((t) => ({
-              ...t,
-              startDate: addDays(t.startDate, diff),
-              endDate: addDays(t.endDate, diff),
-            }))
-            : p.tasks,
+            ? (p.tasks || []).map((t) => {
+              const tStart = toSafeDate(t.startDate, newStart)
+              const tEnd = toSafeDate(t.endDate, newEnd)
+              return {
+                ...t,
+                startDate: addDays(tStart, diff).toISOString(),
+                endDate: addDays(tEnd, diff).toISOString(),
+              }
+            })
+            : (p.tasks || []),
         }
       }),
     )
@@ -291,9 +320,9 @@ export function ProjectTimeline() {
     const newEnd = new Date(editEndDate)
 
     if (editDialog.type === "project") {
-      handleUpdateProject(editDialog.projectId, newStart)
+      handleUpdateProjectDuration(editDialog.projectId, newStart, newEnd)
     } else if (editDialog.type === "task" && editDialog.taskId) {
-      handleUpdateTask(editDialog.projectId, editDialog.taskId, newStart)
+      handleUpdateTaskDuration(editDialog.projectId, editDialog.taskId, newStart, newEnd)
     }
 
     setEditDialog({ isOpen: false, type: null, projectId: null, taskId: null })
@@ -302,7 +331,7 @@ export function ProjectTimeline() {
   const handleDoubleClick = (type: "project" | "task", projectId: string, taskId?: string) => {
     const item = type === "project"
       ? projects.find(p => p.id === projectId)
-      : projects.find(p => p.id === projectId)?.tasks.find(t => t.id === taskId)
+      : projects.find(p => p.id === projectId)?.tasks?.find(t => t.id === taskId)
 
     if (!item) return
 
@@ -312,8 +341,9 @@ export function ProjectTimeline() {
       projectId,
       taskId: taskId || null
     })
-    setEditStartDate(item.startDate.toISOString().split('T')[0])
-    setEditEndDate(item.endDate.toISOString().split('T')[0])
+    
+    setEditStartDate(safeToInputDate(item.startDate))
+    setEditEndDate(safeToInputDate(item.endDate))
   }
 
   return (
@@ -331,8 +361,8 @@ export function ProjectTimeline() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground hidden sm:inline">
-            {viewStartDate.toLocaleString("en", {
+          <span className="text-sm font-medium text-muted-foreground hidden sm:inline capitalize">
+            {viewStartDate.toLocaleString("en-US", {
               month: "long",
               year: "numeric",
             })}
@@ -401,15 +431,16 @@ export function ProjectTimeline() {
         </div>
       </div>
 
+      {/* DESKTOP TIMELINE */}
       <div className="hidden md:block flex-1 overflow-hidden min-w-0">
         <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-x-auto overflow-y-auto min-w-0"
+          className="flex-1 overflow-x-auto overflow-y-auto min-w-0 h-full"
         >
           <div className="relative min-w-max">
-            {/* Timeline Header - Grid Layout */}
+            
+            {/* Timeline Header */}
             <div className="flex h-10 items-center border-b bg-muted/30 border-border sticky top-0 z-20">
-              {/* Sticky Name Column Header */}
               <div
                 ref={nameColRef}
                 className={cn(
@@ -418,11 +449,10 @@ export function ProjectTimeline() {
                 )}
               >
                 <div className="px-4">
-                  <span className="text-xs font-medium text-muted-foreground">Name</span>
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</span>
                 </div>
               </div>
 
-              {/* Scrollable Timeline Dates */}
               <div className="relative shrink-0 h-full" style={{ width: timelineWidth }}>
                 <div className="flex h-full items-center" style={{ width: timelineWidth }}>
                   {dates.map((day, i) => {
@@ -465,10 +495,11 @@ export function ProjectTimeline() {
               </div>
             </div>
 
-            {/* Project Rows with Sticky Name Column */}
+            {/* Project Rows */}
             <div className="flex flex-col relative">
               {projects.map((project) => (
                 <div key={project.id} className="w-full flex flex-col">
+                  {/* Project Bar */}
                   <div className="flex h-[54px] group hover:bg-accent/20 relative border-b border-border/20">
                     <div
                       className={cn(
@@ -487,9 +518,9 @@ export function ProjectTimeline() {
                           <div className={cn("transition-transform", expandedProjects.includes(project.id) ? "rotate-0" : "-rotate-90")}>
                             <CaretDown className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <span className="font-semibold text-md truncate">{project.name}</span>
-                          <span className="ml-1 text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5 shrink-0">
-                            {project.taskCount}
+                          <span className="font-semibold text-[13px] truncate">{project.name}</span>
+                          <span className="ml-1 text-[10px] font-bold text-muted-foreground bg-muted rounded px-1.5 py-0.5 shrink-0">
+                            {project.taskCount || 0}
                           </span>
                         </div>
                       </div>
@@ -516,9 +547,9 @@ export function ProjectTimeline() {
                         item={{
                           id: project.id,
                           name: project.name,
-                          startDate: project.startDate,
-                          endDate: project.endDate,
-                          progress: project.progress,
+                          startDate: toSafeDate(project.startDate),
+                          endDate: toSafeDate(project.endDate),
+                          progress: (project as any).progress,
                         }}
                         variant="project"
                         viewStartDate={viewStartDate}
@@ -530,12 +561,13 @@ export function ProjectTimeline() {
                     </div>
                   </div>
 
+                  {/* Tasks Rows (Jaring Pengaman || []) */}
                   {expandedProjects.includes(project.id) &&
-                    project.tasks.map((task) => (
-                      <div key={task.id} className="flex h-[54px] group hover:bg-accent/10 relative border-b border-border/20">
+                    (project.tasks || []).map((task) => (
+                      <div key={task.id} className="flex h-[54px] group hover:bg-accent/10 relative border-b border-border/20 bg-muted/5">
                         <div
                           className={cn(
-                            "shrink-0 sticky left-0 z-30 bg-background border-r border-border/20 transition-all duration-300",
+                            "shrink-0 sticky left-0 z-30 bg-muted/5 border-r border-border/20 transition-all duration-300",
                             isSidebarOpen ? "w-[280px] lg:w-[320px]" : "w-0 overflow-hidden border-none",
                           )}
                         >
@@ -545,19 +577,19 @@ export function ProjectTimeline() {
                               onCheckedChange={(_checked: boolean) => toggleTaskStatus(project.id, task.id)}
                               className={cn(
                                 "h-4 w-4 rounded-sm",
-                                "data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500 data-[state=checked]:text-white",
+                                "data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 data-[state=checked]:text-white",
                               )}
                             />
                             <div className="flex flex-col flex-1 min-w-0">
-                              <span className={cn("text-md truncate", task.status === "done" && "line-through text-muted-foreground")}>
+                              <span className={cn("text-[12px] truncate", task.status === "done" && "line-through text-muted-foreground")}>
                                 {task.name}
                               </span>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{task.assignee}</span>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span>{(task as any).assignee?.name || "Unassigned"}</span>
                                 <span>•</span>
                                 <PriorityGlyphIcon level={project.priority} size="sm" />
                                 <span>•</span>
-                                <span>{task.status}</span>
+                                <span className="capitalize">{task.status}</span>
                               </div>
                             </div>
                           </div>
@@ -584,8 +616,8 @@ export function ProjectTimeline() {
                             item={{
                               id: task.id,
                               name: task.name,
-                              startDate: task.startDate,
-                              endDate: task.endDate,
+                              startDate: toSafeDate(task.startDate),
+                              endDate: toSafeDate(task.endDate),
                               status: task.status,
                             }}
                             variant="task"
@@ -602,6 +634,7 @@ export function ProjectTimeline() {
               ))}
             </div>
 
+            {/* Today Line */}
             {todayOffsetDays != null && (
               <div
                 className="absolute z-10 pointer-events-none overflow-hidden"
@@ -613,7 +646,7 @@ export function ProjectTimeline() {
                 }}
               >
                 <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-primary"
+                  className="absolute top-0 bottom-0 w-0.5 bg-primary/70 shadow-[0_0_8px_rgba(0,0,0,0.2)]"
                   style={{ left: (todayOffsetDays || 0) * cellWidth + cellWidth / 2 }}
                 />
               </div>
@@ -622,10 +655,10 @@ export function ProjectTimeline() {
         </div>
       </div>
 
+      {/* MOBILE LIST VIEW */}
       <div className="md:hidden flex-1 overflow-auto">
         {projects.map((project) => (
           <div key={project.id} className="border-b border-border/30">
-            {/* Mobile Project Card */}
             <div
               className="p-4 flex items-center justify-between cursor-pointer active:bg-accent/50"
               onClick={() => toggleProject(project.id)}
@@ -638,23 +671,23 @@ export function ProjectTimeline() {
                 )}
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-base truncate">{project.name}</span>
-                    <span className="text-xs text-muted-foreground bg-muted rounded px-1.5 py-0.5 shrink-0">
-                      {project.taskCount}
+                    <span className="font-semibold text-sm truncate">{project.name}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground bg-muted rounded px-1.5 py-0.5 shrink-0">
+                      {project.taskCount || 0}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {project.startDate.toLocaleDateString("vi")} - {project.endDate.toLocaleDateString("vi")}
+                  <div className="text-[11px] font-medium text-muted-foreground mt-1">
+                    {safeFormatDate(project.startDate)} - {safeFormatDate(project.endDate)}
                   </div>
                 </div>
               </div>
-              <div className="text-sm font-medium text-muted-foreground shrink-0 ml-2">{project.progress}%</div>
+              <div className="text-sm font-bold text-muted-foreground shrink-0 ml-2">{Math.round((project as any).progress || 0)}%</div>
             </div>
 
-            {/* Mobile Task List */}
+            {/* Tasks Mobile (Jaring Pengaman || []) */}
             {expandedProjects.includes(project.id) && (
-              <div className="bg-muted/20">
-                {project.tasks.map((task) => (
+              <div className="bg-muted/10">
+                {(project.tasks || []).map((task) => (
                   <div key={task.id} className="px-4 py-3 pl-12 border-t border-border/20">
                     <div className="flex items-start gap-2">
                       <Checkbox
@@ -662,17 +695,19 @@ export function ProjectTimeline() {
                         onCheckedChange={(_checked: boolean) => toggleTaskStatus(project.id, task.id)}
                         className={cn(
                           "h-4 w-4 rounded-sm mt-0.5",
-                          "data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500 data-[state=checked]:text-white",
+                          "data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 data-[state=checked]:text-white",
                         )}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-md">{task.name}</div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                          <span>{task.assignee}</span>
+                        <div className={cn("text-[13px] font-medium", task.status === "done" && "line-through text-muted-foreground")}>
+                          {task.name}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-1">
+                          <span>{(task as any).assignee?.name || "Unassigned"}</span>
                           <span>•</span>
                           <PriorityGlyphIcon level={project.priority} size="sm" />
                           <span>•</span>
-                          <span>{task.status}</span>
+                          <span className="capitalize">{task.status}</span>
                         </div>
                       </div>
                     </div>
@@ -690,7 +725,7 @@ export function ProjectTimeline() {
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Date</DialogTitle>
+            <DialogTitle>Edit Schedule</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -699,10 +734,10 @@ export function ProjectTimeline() {
                 id="item-name"
                 value={editDialog.type === "project"
                   ? projects.find(p => p.id === editDialog.projectId)?.name || ''
-                  : projects.find(p => p.id === editDialog.projectId)?.tasks.find(t => t.id === editDialog.taskId)?.name || ''
+                  : projects.find(p => p.id === editDialog.projectId)?.tasks?.find(t => t.id === editDialog.taskId)?.name || ''
                 }
                 disabled
-                className="bg-muted"
+                className="bg-muted text-muted-foreground"
               />
             </div>
             <div className="space-y-2">
@@ -729,7 +764,7 @@ export function ProjectTimeline() {
               Cancel
             </Button>
             <Button onClick={handleSaveEdit}>
-              Save
+              Save Changes
             </Button>
           </div>
         </DialogContent>
@@ -741,7 +776,7 @@ export function ProjectTimeline() {
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm</DialogTitle>
+            <DialogTitle>Confirm Action</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">{confirmDialog.message}</p>

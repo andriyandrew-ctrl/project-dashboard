@@ -1,3 +1,5 @@
+"use client"
+
 import type { ProjectDetails } from "@/lib/data/project-details"
 import { TimeCard } from "@/components/projects/TimeCard"
 import { BacklogCard } from "@/components/projects/BacklogCard"
@@ -15,18 +17,30 @@ export function RightMetaPanel({ project }: RightMetaPanelProps) {
   const client = clientName ? getClientByName(clientName) : undefined
 
   return (
-    <aside className="flex flex-col gap-10 p-4 pt-8 lg:sticky lg:self-start">
+    // PERUBAHAN: Menghapus bg-card, border, dan padding (p-4). 
+    // Menambahkan pt-2 (padding-top kecil) agar tulisan persis sejajar dengan garis tengah Judul Proyek.
+    <aside className="flex flex-col gap-8 pt-2 lg:sticky lg:top-8 lg:self-start w-full">
+      
+      {/* Waktu Pelaksanaan */}
       <TimeCard time={project.time} />
-      <Separator />
+      
+      <Separator className="bg-border/60" />
+      
+      {/* Informasi Utama */}
       <BacklogCard backlog={project.backlog} />
+      
       {client && (
         <>
-          <Separator />
+          <Separator className="bg-border/60" />
           <ClientCard client={client} />
         </>
       )}
-      <Separator />
-      <QuickLinksCard links={project.quickLinks} />
+      
+      <Separator className="bg-border/60" />
+      
+      {/* Referensi Utama */}
+      <QuickLinksCard fileRef={project.files?.[0]} />
+      
     </aside>
   )
 }

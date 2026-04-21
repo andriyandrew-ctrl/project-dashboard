@@ -1,133 +1,72 @@
-import { ProjectData, WorkStructure } from "../types";
+import { CheckCircle, ArrowRight, FlagPennant, TreeStructure } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/utils";
+import type { ProjectData } from "../types";
 
-import { Label } from "../../ui/label";
-import { ArrowRight, Flag, GitMerge } from "@phosphor-icons/react/dist/ssr";
-
-// I'll create a simple Switch-like toggle here since I didn't scaffold Switch yet.
-function SimpleToggle({ checked, onCheckedChange }: { checked: boolean; onCheckedChange: (c: boolean) => void }) {
-    return (
-        <button
-            onClick={() => onCheckedChange(!checked)}
-            className={cn(
-                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
-                checked ? "bg-primary" : "bg-input"
-            )}
-        >
-            <span
-                className={cn(
-                    "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                    checked ? "translate-x-5" : "translate-x-0"
-                )}
-            />
-        </button>
-    )
-}
-
-
-interface StepStructureProps {
+type StepStructureProps = {
   data: ProjectData;
   updateData: (updates: Partial<ProjectData>) => void;
-}
+};
 
 export function StepStructure({ data, updateData }: StepStructureProps) {
-    const structures: { id: WorkStructure; title: string; desc: string; icon: React.ReactNode; visual: React.ReactNode }[] = [
-        {
-            id: 'linear',
-            title: 'Linear',
-            desc: 'Sequential phases (e.g. Waterfall). One thing after another.',
-            icon: <ArrowRight className="h-5 w-5" />,
-            visual: (
-                <div className="flex items-center gap-2 opacity-50">
-                    <div className="h-2 w-8 rounded bg-current"></div>
-                    <ArrowRight className="h-3 w-3" />
-                    <div className="h-2 w-8 rounded bg-current"></div>
-                    <ArrowRight className="h-3 w-3" />
-                    <div className="h-2 w-8 rounded bg-current"></div>
-                </div>
-            )
-        },
-        {
-            id: 'milestones',
-            title: 'Milestones',
-            desc: 'Key checkpoints or deadlines to hit along the way.',
-            icon: <Flag className="h-5 w-5" />,
-            visual: (
-                <div className="flex items-center justify-between gap-1 opacity-50">
-                    <div className="h-2 w-2 rounded-full bg-current"></div>
-                    <div className="h-0.5 flex-1 bg-current"></div>
-                    <Flag className="h-3 w-3" />
-                    <div className="h-0.5 flex-1 bg-current"></div>
-                    <div className="h-2 w-2 rounded-full bg-current"></div>
-                </div>
-            )
-        },
-        {
-            id: 'multistream',
-            title: 'Multi-stream',
-            desc: 'Parallel tracks of work happening simultaneously.',
-            icon: <GitMerge className="h-5 w-5" />,
-            visual: (
-                <div className="flex flex-col gap-1 opacity-50">
-                    <div className="flex items-center gap-1">
-                        <div className="h-0.5 w-4 bg-current"></div>
-                        <div className="h-1.5 w-6 rounded bg-current"></div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <div className="h-0.5 w-4 bg-current"></div>
-                        <div className="h-1.5 w-6 rounded bg-current"></div>
-                    </div>
-                </div>
-            )
-        }
-    ];
+  const options = [
+    {
+      id: "linear",
+      title: "Linear",
+      description: "Berjalan urut dari awal sampai akhir tanpa cabang (Cocok untuk proyek skala kecil).",
+      icon: ArrowRight,
+    },
+    {
+      id: "milestone",
+      title: "Milestone-based",
+      description: "Berbasis tahapan fase (Contoh: Engineering → Procurement → Construction).",
+      icon: FlagPennant,
+    },
+    {
+      id: "multistream",
+      title: "Multi-stream",
+      description: "Berjalan paralel (Contoh: Tim Produksi, Supply Chain, dan Marketing jalan bareng).",
+      icon: TreeStructure,
+    },
+  ] as const;
 
   return (
-    <div className="flex flex-col space-y-4">
-      <div className="space-y-4 bg-muted p-2 rounded-3xl">
-        <p className="text-sm text-muted-foreground px-4 pt-2">Choose the workflow that fits your team best.</p>
-
-        <div className="grid gap-1">
-          {structures.map((option) => (
-            <div
-              key={option.id}
-              onClick={() => updateData({ structure: option.id })}
-              className={cn(
-                "relative flex cursor-pointer items-center space-x-4 rounded-3xl border-2 p-4 transition-all bg-background",
-                data.structure === option.id 
-                  ? "border-primary ring-1 ring-primary/20" 
-                  : "border-muted"
-              )}
-            >
-              <div className={cn(
-                "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors",
-                 data.structure === option.id ? "bg-background border border-border text-primary" : "bg-background border border-border text-muted-foreground"
-              )}>
-                {option.icon}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between space-y-1">
-                  <h3 className="font-medium">{option.title}</h3>
-                  <div className="text-muted-foreground/50">{option.visual}</div>
-                </div>
-                <p className="text-sm text-muted-foreground">{option.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="space-y-6">
+      <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900/50 dark:bg-blue-900/10">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Pilih metode pelaksanaan proyek. Ini akan membantu sistem menyiapkan *template timeline* (Gantt Chart) yang paling sesuai untuk Anda.
+        </p>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg">
-        <div className="space-y-0.5">
-            <Label className="text-base">Add starter tasks</Label>
-            <p className="text-sm text-muted-foreground">
-                Automatically add default tasks based on your selection.
-            </p>
-        </div>
-        <SimpleToggle 
-            checked={data.addStarterTasks} 
-            onCheckedChange={(c) => updateData({ addStarterTasks: c })} 
-        />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {options.map((opt) => {
+          const isSelected = data.structure === opt.id;
+          const Icon = opt.icon;
+          return (
+            <div
+              key={opt.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => updateData({ structure: opt.id as any })}
+              className={cn(
+                "relative flex cursor-pointer flex-col gap-3 rounded-xl p-4 text-left transition-all hover:bg-accent/50 border-2",
+                isSelected
+                  ? "border-primary bg-primary/5"
+                  : "border-border/50 bg-background hover:border-primary/50"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className={cn("rounded-lg p-2", isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                {isSelected && <CheckCircle className="h-5 w-5 text-primary" weight="fill" />}
+              </div>
+              <div>
+                <div className="font-medium text-foreground leading-snug">{opt.title}</div>
+                <div className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{opt.description}</div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
